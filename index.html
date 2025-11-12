@@ -1,0 +1,76 @@
+<!-- index.html -->
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>머니 캐쳐</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#5C94FC" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="머니 캐쳐" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="msapplication-TileColor" content="#5C94FC" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>머니 캐쳐</h1>
+    <div class="stats">
+      <span id="score">점수 0</span>
+      <span id="combo">콤보 ×1</span>
+      <span id="timer">60s</span>
+      <span id="level">LV 1</span>
+      <span id="hi">최고 0</span>
+    </div>
+    <div class="toggles">
+      <button id="btn-pause" title="일시정지" class="ghost sm">Ⅱ</button>
+      <button id="btn-mute" title="음소거" class="ghost sm">🔊</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="canvas-wrap">
+      <canvas id="game" width="360" height="520" aria-label="게임 화면" role="img"></canvas>
+
+      <!-- 콤보 바 -->
+      <div class="combo-wrap">
+        <div class="combo-label">COMBO</div>
+        <div class="combo-bar"><div id="combo-fill" class="combo-fill"></div></div>
+        <div id="combo-mult" class="combo-mult">×1</div>
+      </div>
+
+      <!-- 오버레이 -->
+      <div id="overlay" class="overlay">
+        <div class="panel">
+          <h2 id="ov-title">머니 캐쳐</h2>
+          <p id="ov-sub">좌우 스와이프 또는 방향키로 요원을 이동하세요.</p>
+          <div class="row"><button id="btn-start" class="primary">GAME START</button></div>
+          <div class="row small"><span>같은 종류 연속 수집 시 콤보 유지</span></div>
+        </div>
+      </div>
+
+      <!-- 배너 -->
+      <div id="banner" class="banner" hidden></div>
+    </div>
+  </main>
+
+  <footer class="controls">
+    <button id="btn-share" class="ghost">공유</button>
+    <button id="btn-report" class="ghost" hidden>토스 앱 열기</button>
+  </footer>
+
+  <!-- 선택 오디오
+  <audio id="sfx-catch"  src="assets/catch_coin.mp3" preload="auto"></audio>
+  <audio id="sfx-penalty" src="assets/penalty.mp3"    preload="auto"></audio>
+  <audio id="sfx-combo"   src="assets/combo_up.mp3"    preload="auto"></audio>
+  <audio id="sfx-clear"   src="assets/level_clear.mp3" preload="auto"></audio>
+  <audio id="bgm"         src="assets/bgm_loop.mp3"    preload="auto" loop></audio>
+  -->
+
+  <script src="game.js"></script>
+</body>
+</html>

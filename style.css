@@ -1,0 +1,490 @@
+/* style.css — 슈퍼마리오 스타일 */
+:root {
+  --bg: #5C94FC; /* 밝은 파란 하늘 */
+  --panel: #8B6F47; /* 갈색 블록 */
+  --ink: #FFFFFF; /* 흰색 텍스트 */
+  --muted: #FFE66D; /* 노란색 */
+  --neon: #FF6B6B; /* 빨간색 */
+  --neon2: #4ECDC4; /* 청록색 */
+  --good: #51CF66; /* 초록색 */
+  --warn: #FF6B6B; /* 빨간색 */
+  --sky: #87CEEB; /* 하늘색 */
+  --cloud: #FFFFFF; /* 구름 흰색 */
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(
+    180deg,
+    #87CEEB 0%,
+    #5C94FC 50%,
+    #4A7BC8 100%
+  );
+  color: var(--ink);
+  font-family: "Press Start 2P", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  letter-spacing: 0;
+  word-spacing: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+body {
+  width: 100%;
+  max-width: 100vw;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: linear-gradient(180deg, #8B6F47, #6B5438);
+  border-bottom: 4px solid #5C4632;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  border-style: ridge;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.topbar h1 {
+  margin: 0;
+  font-size: clamp(8px, 2.5vw, 12px);
+  color: #FFFFFF;
+  text-shadow: 2px 2px 0px #000000, 4px 4px 0px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+.stats {
+  display: flex;
+  gap: clamp(8px, 2vw, 14px);
+  color: #FFE66D;
+  flex: 1;
+  justify-content: center;
+  font-size: clamp(7px, 2vw, 10px);
+  text-shadow: 1px 1px 0px #000000;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.stats span {
+  white-space: nowrap;
+}
+.toggles {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.stage {
+  display: grid;
+  place-items: center;
+  padding: clamp(8px, 2vw, 12px);
+  background: linear-gradient(180deg, #87CEEB 0%, #5C94FC 100%);
+  flex: 1;
+  min-height: 0;
+}
+.canvas-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+}
+canvas {
+  width: 100%;
+  max-width: 440px;
+  height: auto;
+  aspect-ratio: 360 / 520;
+  background: linear-gradient(180deg, #87CEEB 0%, #5C94FC 50%, #4A7BC8 100%);
+  border: clamp(2px, 1vw, 4px) solid #8B6F47;
+  border-radius: clamp(6px, 1.5vw, 8px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  border-style: ridge;
+  display: block;
+  touch-action: none;
+}
+
+/* 콤보 바 */
+.combo-wrap {
+  position: absolute;
+  left: 50%;
+  top: clamp(8px, 2vw, 10px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 1.5vw, 10px);
+  background: rgba(139, 111, 71, 0.95);
+  border: clamp(2px, 0.8vw, 3px) solid #5C4632;
+  border-radius: clamp(6px, 1.5vw, 8px);
+  padding: clamp(6px, 1.5vw, 8px) clamp(8px, 2vw, 12px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  border-style: ridge;
+  max-width: 95%;
+  backdrop-filter: blur(4px);
+}
+.combo-label {
+  font-size: clamp(7px, 2vw, 10px);
+  color: #FFFFFF;
+  text-shadow: 1px 1px 0px #000000;
+  white-space: nowrap;
+}
+.combo-bar {
+  width: clamp(120px, 30vw, 200px);
+  height: clamp(10px, 2.5vw, 14px);
+  background: #2C1810;
+  border-radius: clamp(3px, 0.8vw, 4px);
+  overflow: hidden;
+  border: clamp(1px, 0.5vw, 2px) solid #5C4632;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  flex-shrink: 1;
+  min-width: 0;
+}
+.combo-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #FF6B6B 0%, #FFE66D 50%, #51CF66 100%);
+  box-shadow: 0 0 8px rgba(255, 230, 109, 0.6);
+  transition: width 0.1s ease-out;
+  will-change: width;
+  border-radius: 2px;
+}
+.combo-mult {
+  font-size: clamp(8px, 2vw, 10px);
+  color: #FFE66D;
+  text-shadow: 2px 2px 0px #000000;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.controls {
+  display: flex;
+  gap: clamp(8px, 2vw, 12px);
+  justify-content: center;
+  padding: clamp(8px, 2vw, 12px);
+  background: linear-gradient(180deg, #8B6F47, #6B5438);
+  border-top: clamp(2px, 1vw, 4px) solid #5C4632;
+  box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.3);
+  border-style: ridge;
+  flex-wrap: wrap;
+}
+button,
+.link {
+  appearance: none;
+  border: none;
+  border-radius: clamp(6px, 1.5vw, 8px);
+  padding: clamp(10px, 2.5vw, 12px) clamp(12px, 3vw, 16px);
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: clamp(9px, 2.5vw, 12px);
+  letter-spacing: 0;
+  word-spacing: 0;
+  border: clamp(2px, 0.8vw, 3px) solid #5C4632;
+  border-style: ridge;
+  text-shadow: 1px 1px 0px #000000;
+  min-height: 44px; /* 터치 영역 최소 크기 */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.primary {
+  background: linear-gradient(180deg, #FF6B6B, #FF4757);
+  color: #FFFFFF;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+.primary:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+}
+.ghost {
+  background: linear-gradient(180deg, #6B5438, #5C4632);
+  color: #FFFFFF;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+}
+.ghost.sm {
+  padding: clamp(6px, 1.5vw, 8px) clamp(8px, 2vw, 10px);
+  border-radius: clamp(4px, 1vw, 6px);
+  min-height: 36px;
+}
+.link {
+  color: #FFE66D;
+  text-shadow: 2px 2px 0px #000000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.link[hidden] {
+  display: none;
+}
+
+/* 버튼 hidden 처리 */
+button[hidden] {
+  display: none !important;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+.overlay .panel {
+  background: linear-gradient(180deg, #8B6F47, #6B5438);
+  border: clamp(3px, 1vw, 4px) solid #5C4632;
+  border-radius: clamp(10px, 2.5vw, 12px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  padding: clamp(14px, 3.5vw, 18px);
+  text-align: center;
+  max-width: 92%;
+  border-style: ridge;
+  margin: 10px;
+}
+.overlay .panel h2 {
+  margin: 0 0 clamp(6px, 1.5vw, 8px) 0;
+  font-size: clamp(9px, 2.5vw, 12px);
+  color: #FFFFFF;
+  text-shadow: 2px 2px 0px #000000, 4px 4px 0px rgba(0, 0, 0, 0.3);
+  line-height: 1.4;
+  word-break: keep-all;
+}
+.overlay .panel p {
+  font-size: clamp(8px, 2vw, 10px);
+  color: #FFE66D;
+  text-shadow: 1px 1px 0px #000000;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+.overlay .panel .row {
+  margin-top: clamp(10px, 2.5vw, 12px);
+}
+.overlay .panel .row.small {
+  font-size: clamp(7px, 1.8vw, 9px);
+  color: #FFFFFF;
+  text-shadow: 1px 1px 0px #000000;
+  line-height: 1.4;
+}
+
+.banner {
+  position: absolute;
+  left: 50%;
+  top: 20%;
+  transform: translateX(-50%) translateY(-5px);
+  background: linear-gradient(180deg, #FFE66D, #FFD93D);
+  border: clamp(2px, 0.8vw, 3px) solid #5C4632;
+  color: #000000;
+  padding: clamp(8px, 2vw, 10px) clamp(10px, 2.5vw, 12px);
+  border-radius: clamp(6px, 1.5vw, 8px);
+  font-weight: 800;
+  font-size: clamp(9px, 2.5vw, 12px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+  border-style: ridge;
+  text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  z-index: 1000;
+  max-width: 90%;
+  word-break: keep-all;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+.banner[hidden] {
+  display: none;
+  opacity: 0;
+}
+
+/* 모바일 최적화 */
+@media (max-width: 480px) {
+  html, body {
+    font-size: 12px;
+  }
+  
+  .topbar {
+    padding: 6px 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .topbar h1 {
+    font-size: 9px;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  
+  .stats {
+    gap: 4px;
+    font-size: 7px;
+    justify-content: center;
+    width: 100%;
+    order: 2;
+  }
+  
+  .toggles {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    margin-top: 4px;
+  }
+  
+  .stage {
+    padding: 4px;
+  }
+  
+  .controls {
+    padding: 8px 4px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  
+  .controls button,
+  .controls .link {
+    flex: 1;
+    min-width: 120px;
+    max-width: 200px;
+  }
+  
+  .overlay .panel {
+    padding: 14px 10px;
+    max-width: 96%;
+    margin: 5px;
+  }
+  
+  .overlay .panel h2 {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+  
+  .overlay .panel p {
+    font-size: 8px;
+    line-height: 1.4;
+  }
+  
+  .combo-wrap {
+    padding: 6px 8px;
+    gap: 6px;
+    max-width: 98%;
+  }
+  
+  .combo-bar {
+    width: clamp(100px, 35vw, 180px);
+  }
+}
+
+/* 작은 화면 (세로 모드) */
+@media (max-height: 700px) and (orientation: portrait) {
+  .topbar {
+    padding: 5px 6px;
+  }
+  
+  .topbar h1 {
+    font-size: 8px;
+  }
+  
+  .stats {
+    font-size: 6px;
+    gap: 4px;
+  }
+  
+  .stage {
+    padding: 4px;
+  }
+  
+  .controls {
+    padding: 6px 4px;
+  }
+  
+  .overlay .panel {
+    padding: 12px 8px;
+    max-width: 98%;
+  }
+}
+
+/* 가로 모드 모바일 */
+@media (max-width: 900px) and (orientation: landscape) {
+  .topbar {
+    padding: 4px 6px;
+    flex-wrap: nowrap;
+  }
+  
+  .topbar h1 {
+    font-size: 8px;
+    width: auto;
+    margin-bottom: 0;
+  }
+  
+  .stats {
+    font-size: 7px;
+    gap: 6px;
+    order: 0;
+    width: auto;
+  }
+  
+  .stage {
+    padding: 4px;
+  }
+  
+  .canvas-wrap {
+    max-width: min(90vh, 600px);
+  }
+}
+
+/* 터치 디바이스 */
+@media (hover: none) and (pointer: coarse) {
+  button, .link {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: clamp(10px, 3vw, 12px);
+  }
+  
+  .ghost.sm {
+    min-height: 36px;
+    padding: 8px 10px;
+    font-size: clamp(9px, 2.5vw, 11px);
+  }
+  
+  /* 터치 영역 확대 */
+  button:active,
+  .link:active {
+    transform: scale(0.95);
+    transition: transform 0.1s;
+  }
+}
+
+/* 매우 작은 화면 */
+@media (max-width: 320px) {
+  .stats {
+    font-size: 6px;
+    gap: 3px;
+  }
+  
+  .stats span {
+    font-size: 6px;
+  }
+  
+  .topbar h1 {
+    font-size: 7px;
+  }
+  
+  .combo-wrap {
+    padding: 4px 6px;
+    gap: 4px;
+  }
+  
+  .combo-label {
+    font-size: 6px;
+  }
+  
+  .combo-mult {
+    font-size: 7px;
+  }
+  
+  .combo-bar {
+    width: clamp(80px, 40vw, 150px);
+    height: 10px;
+  }
+}
