@@ -30,32 +30,71 @@
     // dpr 스케일 적용 (setTransform으로 누적 방지)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
+  function syncSidebarHeight() {
+    // 사이드바 높이를 캔버스와 동일하게 설정
+    const elSidebar = document.getElementById("sidebar");
+    if (elSidebar && cvs) {
+      const canvasRect = cvs.getBoundingClientRect();
+      const canvasHeight = canvasRect.height;
+      if (canvasHeight > 0) {
+        elSidebar.style.height = `${canvasHeight}px`;
+        elSidebar.style.maxHeight = `${canvasHeight}px`;
+        elSidebar.style.minHeight = `${canvasHeight}px`;
+      }
+    }
+  }
   resize();
-  window.addEventListener("resize", resize, { passive: true });
+  // 사이드바 높이 동기화 (DOM이 준비된 후)
+  setTimeout(() => {
+    syncSidebarHeight();
+  }, 100);
+  window.addEventListener("resize", () => {
+    resize();
+    // 리사이즈 후 사이드바 높이 동기화
+    setTimeout(syncSidebarHeight, 50);
+  }, { passive: true });
   window.addEventListener("orientationchange", () => {
     // 화면 회전 시 리사이즈 (약간의 지연을 두어 브라우저가 레이아웃을 완료한 후)
-    setTimeout(resize, 100);
+    setTimeout(() => {
+      resize();
+      syncSidebarHeight();
+    }, 100);
   }, { passive: true });
   // 초기 로드 후에도 한 번 더 실행
   if (document.readyState === "loading") {
     window.addEventListener("load", () => {
-      setTimeout(resize, 100);
+      setTimeout(() => {
+        resize();
+        syncSidebarHeight();
+      }, 100);
     }, { once: true });
   } else {
-    setTimeout(resize, 100);
+    setTimeout(() => {
+      resize();
+      syncSidebarHeight();
+    }, 100);
   }
 
   /** HUD refs */
   const $ = (id) => document.getElementById(id);
   const elScore = $("score"),
     elCombo = $("combo"),
-    elTimer = $("timer"),
     elLevel = $("level"),
-    elHi = $("hi");
+    elHi = $("hi"),
+    elHearts = $("hearts"),
+    elDebuffCard = $("debuff-card"),
+    elDebuffText = $("debuff-text"),
+    elDebuffDesc = $("debuff-desc"),
+    elDebuffTimer = $("debuff-timer"),
+    elDebuffNext = $("debuff-next"),
+    elSidebar = $("sidebar");
   const overlay = $("overlay"),
+    tutorialOverlay = $("tutorial-overlay"),
     ovTitle = $("ov-title"),
     ovSub = $("ov-sub"),
-    btnStart = $("btn-start");
+    btnStart = $("btn-start"),
+    btnTutorial = $("btn-tutorial"),
+    btnCloseTutorial = $("btn-close-tutorial");
   const btnPause = $("btn-pause"),
     btnMute = $("btn-mute"),
     btnShare = $("btn-share"),
@@ -124,39 +163,126 @@
     [ITEM.DEBT, 10],
   ];
 
-  const LV = [
-    { id: 1, dur: 60, spawn: 700, g: 0.0006, maxSpeed: 0.38 },
-    { id: 2, dur: 60, spawn: 600, g: 0.0007, maxSpeed: 0.42 },
-    { id: 3, dur: 70, spawn: 520, g: 0.0008, maxSpeed: 0.46 },
-    { id: 4, dur: 80, spawn: 460, g: 0.0009, maxSpeed: 0.5 },
-    { id: 5, dur: 90, spawn: 420, g: 0.001, maxSpeed: 0.56 },
-  ];
+  // 레벨 설정 (점수 기반 자동 레벨업, 최대 10)
+  const MAX_LEVEL = 10;
+  const LEVEL_SCORE_INTERVAL = 100; // 100점 단위로 레벨업
+  const LV = [];
+  for (let i = 1; i <= MAX_LEVEL; i++) {
+    const baseSpawn = 700 - (i - 1) * 50;
+    const baseG = 0.0006 + (i - 1) * 0.00005;
+    const baseMaxSpeed = 0.38 + (i - 1) * 0.02;
+    LV.push({
+      id: i,
+      spawn: Math.max(400, baseSpawn),
+      g: Math.min(0.0012, baseG),
+      maxSpeed: Math.min(0.65, baseMaxSpeed),
+    });
+  }
 
   /** State */
   let levelIndex = 0,
-    timeLeft = LV[0].dur,
     score = 0,
     highScore = Number(localStorage.getItem("mc.highscore") || 0);
-  let comboType = null,
-    comboCount = 0;
+  let comboCount = 0; // 통합 콤보 카운트 (+ 요소만)
   let paused = true,
     gameOver = false,
     muted = false;
   let nextSpawnAt = 0;
-  elHi.textContent = `최고 ${highScore}`;
+  let hearts = 5; // 생명 5개 시스템
+  elHi.textContent = highScore;
 
-  // combo timer (게임 시간 기반으로 변경)
+  // combo timer (게임 시간 기반)
   const COMBO_DURATION = 3.0; // 3초 동안 콤보 유지
   let comboTimeLeft = 0; // 남은 콤보 시간 (초)
   let comboPendingReset = false; // 콤보 리셋 대기 플래그
 
-  /** Agent (character sprite) */
+  // 디버프 시스템 (18개 디버프)
+  const DEBUFFS = {
+    // 기존 디버프 (3개)
+    KOSPI_DOWN: "kospi_down", // 코스피 하락: 점수 획득량 50% 감소
+    TAX_BOMB: "tax_bomb", // 세금 폭탄: 세금/빚 출현 빈도 증가
+    MONDAY_BLUES: "monday_blues", // 월요병: 콤보 게이지 감소 속도 증가
+    
+    // 경제/금융 관련 (4개)
+    INTEREST_RATE_UP: "interest_rate_up", // 📈 금리 인상: 빚 아이템 감점 2배
+    EXCHANGE_RATE_SPIKE: "exchange_rate_spike", // 💱 환율 폭등: 아이템 좌우 흔들림
+    LIQUIDITY_CRISIS: "liquidity_crisis", // 💧 유동성 위기: + 아이템 출현 빈도 50% 감소
+    
+    // 직장/일상 관련 (4개)
+    OVERTIME_MODE: "overtime_mode", // 🌙 야근 모드: 화면 어두워짐
+    MEETING_CALL: "meeting_call", // 📞 회의 소환: 3초마다 0.5초 정지
+    COFFEE_SHORTAGE: "coffee_shortage", // ☕ 커피 부족: 이동 속도 30% 감소
+    
+    // 심리/상태 관련 (4개)
+    PANIC_SELL: "panic_sell", // 😱 패닉셀: 아이템 낙하 속도 2배
+    BURNOUT: "burnout", // 😵 번아웃: 화면 흑백, 콤보 게이지 2배속 감소
+    FOMO_SYNDROME: "fomo_syndrome", // 🤯 FOMO 증후군: - 아이템이 +로 위장
+    SAVING_OBSESSION: "saving_obsession", // 🔒 저축 강박: 획득 점수 30% 잠금
+    
+    // 사회/시사 관련 (2개)
+    REAL_ESTATE_BOOM: "real_estate_boom", // 🏠 부동산 폭등: 화면 하단 30% 가려짐
+    SUBSCRIPTION_BOMB: "subscription_bomb", // 💳 구독료 폭탄: 2초마다 -10점
+  };
+  
+  // 디버프 중첩 시스템 (최대 3개)
+  let activeDebuffs = []; // 배열로 관리
+  let debuffNextTime = 0; // 다음 디버프 발생 시간
+  
+  // 디버프별 특수 상태 변수
+  let meetingCallNextStop = 0; // 회의 소환: 다음 정지 시간
+  let meetingCallStopped = false; // 회의 소환: 현재 정지 상태
+  let subscriptionBombNextCharge = 0; // 구독료 폭탄: 다음 차감 시간
+  let lockedScore = 0; // 저축 강박: 잠긴 점수
+  
+  // 배너 큐 시스템 (디버프 메시지 우선순위 관리)
+  let bannerQueue = []; // 배너 메시지 큐
+  let currentBannerEndTime = 0; // 현재 배너 종료 시간
+  
+  // 디버프 정보 구조
+  const DEBUFF_INFO = {
+    [DEBUFFS.KOSPI_DOWN]: { duration: 15000, name: "📉 코스피 하락", desc: "점수 획득량 50% 감소" },
+    [DEBUFFS.TAX_BOMB]: { duration: 15000, name: "💣 세금 폭탄", desc: "세금/빚 출현 빈도 증가" },
+    [DEBUFFS.MONDAY_BLUES]: { duration: 15000, name: "😴 월요병", desc: "콤보 게이지 감소 속도 증가" },
+    [DEBUFFS.INTEREST_RATE_UP]: { duration: 15000, name: "📈 금리 인상", desc: "빚 아이템 감점 2배" },
+    [DEBUFFS.EXCHANGE_RATE_SPIKE]: { duration: 12000, name: "💱 환율 폭등", desc: "아이템 좌우 흔들림" },
+    [DEBUFFS.LIQUIDITY_CRISIS]: { duration: 15000, name: "💧 유동성 위기", desc: "+ 아이템 출현 50% 감소" },
+    [DEBUFFS.OVERTIME_MODE]: { duration: 10000, name: "🌙 야근 모드", desc: "화면 어두워짐" },
+    [DEBUFFS.MEETING_CALL]: { duration: 12000, name: "📞 회의 소환", desc: "3초마다 0.5초 정지" },
+    [DEBUFFS.COFFEE_SHORTAGE]: { duration: 10000, name: "☕ 커피 부족", desc: "이동 속도 30% 감소" },
+    [DEBUFFS.PANIC_SELL]: { duration: 8000, name: "😱 패닉셀", desc: "낙하 속도 2배" },
+    [DEBUFFS.BURNOUT]: { duration: 10000, name: "😵 번아웃", desc: "화면 흑백, 콤보 2배속 감소" },
+    [DEBUFFS.FOMO_SYNDROME]: { duration: 12000, name: "🤯 FOMO 증후군", desc: "- 아이템이 +로 위장" },
+    [DEBUFFS.SAVING_OBSESSION]: { duration: 20000, name: "🔒 저축 강박", desc: "획득 점수 30% 잠금" },
+    [DEBUFFS.REAL_ESTATE_BOOM]: { duration: 15000, name: "🏠 부동산 폭등", desc: "화면 하단 30% 가려짐" },
+    [DEBUFFS.SUBSCRIPTION_BOMB]: { duration: 12000, name: "💳 구독료 폭탄", desc: "2초마다 -10점" },
+  };
+  
+  // 레벨별 디버프 주기 (밀리초)
+  function getDebuffInterval(level) {
+    if (level <= 3) return 45000; // 2~3레벨: 45초
+    if (level <= 5) return 40000; // 4~5레벨: 40초
+    return 30000; // 6~10레벨: 30초
+  }
+  
+  // 레벨별 최대 디버프 중첩 수
+  function getMaxDebuffStack(level) {
+    if (level <= 5) return 1; // 2~5레벨: 1개
+    if (level <= 8) return 2; // 6~8레벨: 2개
+    return 3; // 9~10레벨: 3개
+  }
+  
+  // 디버프가 활성화되어 있는지 확인
+  function hasDebuff(debuffType) {
+    return activeDebuffs.some(d => d.type === debuffType);
+  }
+
+  /** Agent (character sprite) - 이동 속도 증가 */
   const agent = {
     x: world.w / 2,
     y: world.h - 58,
     w: 76,
     h: 32,
-    speed: 1.2,
+    speed: 2.0, // 이동 속도 증가 (1.2 -> 2.0)
     vx: 0,
     face: 1,
     anim: { kind: "idle", t: 0, frame: 0 },
@@ -175,7 +301,30 @@
     return tbl.at(-1)[0];
   }
   function spawnOne() {
-    const type = rndWeighted(WEIGHTS);
+    // 디버프 적용
+    let weights = [...WEIGHTS];
+    
+    // 세금 폭탄: 세금/빚 출현 빈도 증가
+    if (hasDebuff(DEBUFFS.TAX_BOMB)) {
+      weights = weights.map(([type, weight]) => {
+        if (type === ITEM.TAX || type === ITEM.DEBT) {
+          return [type, weight * 2.5]; // 2.5배 증가
+        }
+        return [type, weight];
+      });
+    }
+    
+    // 유동성 위기: + 아이템 출현 빈도 50% 감소
+    if (hasDebuff(DEBUFFS.LIQUIDITY_CRISIS)) {
+      weights = weights.map(([type, weight]) => {
+        if (type === ITEM.MONEY || type === ITEM.POINT || type === ITEM.COUPON) {
+          return [type, weight * 0.5]; // 50% 감소
+        }
+        return [type, weight];
+      });
+    }
+    
+    const type = rndWeighted(weights);
     const margin = 16;
     const x = margin + Math.random() * (world.w - margin * 2);
     const y = -20;
@@ -210,14 +359,42 @@
     world.shakeAmp = amp;
     world.shakeT = performance.now() + ms;
   }
-  function popBanner(text, ms = 1500) {
+  function popBanner(text, ms = 1500, priority = 0) {
+    // priority: 0 = 일반, 1 = 디버프 (낮은 우선순위)
+    const now = performance.now();
+    
+    // 디버프 메시지는 큐에 추가 (다른 메시지가 표시 중이면 대기)
+    if (priority === 1) {
+      // 현재 배너가 표시 중이고 디버프가 아니면 큐에 추가
+      if (!banner.hidden && now < currentBannerEndTime) {
+        bannerQueue.push({ text, ms, priority });
+        return;
+      }
+    } else {
+      // 일반 메시지는 즉시 표시 (기존 배너 중단)
+      clearTimeout(popBanner._t);
+      // 큐에 있던 디버프 메시지들은 나중에 표시
+    }
+    
+    // 배너 표시
     banner.textContent = text;
     banner.hidden = false;
     clearTimeout(popBanner._t);
+    currentBannerEndTime = now + ms;
+    
+    // 여러 줄 텍스트 지원
+    if (text.includes("\n")) {
+      banner.style.whiteSpace = "pre-line";
+      banner.style.lineHeight = "1.5";
+      banner.style.textAlign = "center";
+    } else {
+      banner.style.whiteSpace = "normal";
+      banner.style.textAlign = "center";
+    }
     
     // 애니메이션 효과 (페이드 인)
     requestAnimationFrame(() => {
-      banner.style.transition = "opacity 0.2s ease-out, transform 0.2s ease-out";
+      banner.style.transition = "opacity 0.3s ease-out, transform 0.3s ease-out";
       banner.style.opacity = "1";
       banner.style.transform = "translateX(-50%) translateY(0)";
     });
@@ -225,12 +402,20 @@
     popBanner._t = setTimeout(() => {
       // 페이드 아웃
       banner.style.opacity = "0";
-      banner.style.transform = "translateX(-50%) translateY(-5px)";
+      banner.style.transform = "translateX(-50%) translateY(-10px)";
       setTimeout(() => {
         banner.hidden = true;
-        banner.style.opacity = "";
-        banner.style.transform = "";
-      }, 200);
+        banner.style.whiteSpace = "normal";
+        banner.style.lineHeight = "";
+        banner.style.textAlign = "";
+        currentBannerEndTime = 0;
+        
+        // 큐에 있는 다음 메시지 표시
+        if (bannerQueue.length > 0) {
+          const next = bannerQueue.shift();
+          popBanner(next.text, next.ms, next.priority);
+        }
+      }, 300);
     }, ms);
   }
 
@@ -268,64 +453,238 @@
     return dx * dx + dy * dy <= c.r * c.r;
   }
 
-  /** Combo */
-  function refreshCombo() {
-    comboTimeLeft = COMBO_DURATION; // 콤보 시간을 최대로 리셋
+  /** Combo - 새로운 배수 시스템 */
+  // 요청사항: 10+ → 0.25배, 20+ → 0.5배, 30+ → 0.75배, 40+ → 1.25배, 50+ → 1.5배
+  // 이것은 기본 점수에 곱해지는 배수로 해석
+  function getComboMultiplier(combo) {
+    if (combo >= 50) return 1.5; // MAX COMBO!!!
+    if (combo >= 40) return 1.25;
+    if (combo >= 30) return 0.75;
+    if (combo >= 20) return 0.5;
+    if (combo >= 10) return 0.25;
+    return 1.0; // 10 미만은 기본 배수
   }
+  
+  function refreshCombo() {
+    let duration = COMBO_DURATION;
+    // 월요병 또는 번아웃: 콤보 게이지 감소 속도 2배
+    if (hasDebuff(DEBUFFS.MONDAY_BLUES) || hasDebuff(DEBUFFS.BURNOUT)) {
+      duration *= 0.5;
+    }
+    comboTimeLeft = duration;
+  }
+  
   function updateComboUI() {
-    // 콤보가 활성화되어 있고 시간이 남아있을 때만 게이지 표시
+    // 콤보 게이지 업데이트
+    let duration = COMBO_DURATION;
+    // 월요병 또는 번아웃: 콤보 게이지 감소 속도 2배
+    if (hasDebuff(DEBUFFS.MONDAY_BLUES) || hasDebuff(DEBUFFS.BURNOUT)) {
+      duration *= 0.5;
+    }
+    
     if (comboCount > 0 && comboTimeLeft > 0) {
-      const pct = Math.min(1, comboTimeLeft / COMBO_DURATION);
+      const pct = Math.min(1, comboTimeLeft / duration);
       fill.style.width = `${Math.max(0, Math.min(100, pct * 100))}%`;
-      multEl.textContent = `×${comboCount}`;
+      if (comboCount >= 50) {
+        multEl.textContent = "MAX COMBO!!!";
+        multEl.style.color = "#FFE66D";
+        multEl.style.animation = "pulse 0.5s infinite";
+      } else {
+        multEl.textContent = `×${comboCount}`;
+        multEl.style.color = "";
+        multEl.style.animation = "";
+      }
     } else if (comboCount > 0 && comboTimeLeft <= 0 && !comboPendingReset) {
-      // 콤보 시간이 끝났지만 아직 리셋되지 않은 경우, 게이지를 0%로 설정
-      // 플래그가 아직 설정되지 않았을 때만 설정 (중복 방지)
       fill.style.width = '0%';
-      multEl.textContent = `×${comboCount}`;
-      // 다음 프레임에서 리셋하도록 플래그 설정
+      if (comboCount >= 50) {
+        multEl.textContent = "MAX COMBO!!!";
+      } else {
+        multEl.textContent = `×${comboCount}`;
+      }
       comboPendingReset = true;
     } else if (comboPendingReset) {
-      // 리셋 대기 중일 때도 게이지를 0%로 유지
       fill.style.width = '0%';
       multEl.textContent = `×${comboCount}`;
     } else {
-      // 콤보가 없으면 게이지를 0%로 설정
       fill.style.width = '0%';
       multEl.textContent = '×1';
+      multEl.style.color = "";
+      multEl.style.animation = "";
     }
   }
+  
   function resetCombo() {
-    comboType = null;
     comboCount = 0;
     comboTimeLeft = 0;
-    comboPendingReset = false; // 리셋 플래그도 초기화
+    comboPendingReset = false;
   }
 
-  /** Score */
+  /** Score - 새로운 콤보 시스템 */
   function collect(type) {
     const base = SCORE[type] || 0;
     if (type === ITEM.TAX || type === ITEM.DEBT) {
-      score += base;
-      // TAX/DEBT 수집 시 콤보 시간만 즉시 초기화 (게이지는 자연스럽게 사라짐)
-      comboTimeLeft = 0;
-      comboType = null;
-      comboCount = 0;
+      // TAX/DEBT 수집 시 콤보 완전 초기화
+      if (comboCount > 0) {
+        resetCombo();
+        popBanner("콤보 초기화!");
+      }
+      // 디버프 적용
+      let scoreMultiplier = 1.0;
+      if (hasDebuff(DEBUFFS.KOSPI_DOWN)) {
+        scoreMultiplier *= 0.5; // 코스피 하락: 50% 감소
+      }
+      // 금리 인상: 빚 아이템 감점 2배
+      if (type === ITEM.DEBT && hasDebuff(DEBUFFS.INTEREST_RATE_UP)) {
+        scoreMultiplier *= 2.0; // 빚 아이템 감점 2배
+      }
+      score += base * scoreMultiplier;
       vibrate(40);
       shake(8, 200);
     } else {
-      if (comboType === type) {
-        // 같은 타입이면 콤보 증가 (최대 4로 제한)
-        comboCount = Math.min(4, comboCount + 1);
-      } else {
-        // 다른 타입이면 콤보 초기화하고 새 콤보 시작
-        comboType = type;
-        comboCount = 1;
-      }
+      // + 요소만 콤보 증가
+      comboCount++;
       refreshCombo();
-      const mult = Math.max(1, Math.min(4, comboCount)); // 최대 4로 제한
-      score += base * mult;
-      if (mult > 1) popBanner(`콤보 ×${mult}`);
+      const mult = getComboMultiplier(comboCount);
+      // 디버프 적용
+      let scoreMultiplier = 1.0;
+      if (hasDebuff(DEBUFFS.KOSPI_DOWN)) {
+        scoreMultiplier *= 0.5; // 코스피 하락: 50% 감소
+      }
+      if (hasDebuff(DEBUFFS.SAVING_OBSESSION)) {
+        // 저축 강박: 30% 잠금 (추후 구현)
+        scoreMultiplier *= 0.7; // 일단 30% 감소로 적용
+      }
+      score += base * mult * scoreMultiplier;
+      
+      // 콤보 배너는 게임 화면에 표시하지 않음 (사이드바에서만 확인 가능)
+      
+      // 점수 기반 자동 레벨업
+      checkLevelUp();
+    }
+  }
+  
+  function checkLevelUp() {
+    const newLevel = Math.min(MAX_LEVEL - 1, Math.floor(score / LEVEL_SCORE_INTERVAL));
+    if (newLevel > levelIndex) {
+      levelIndex = newLevel;
+      popBanner(`레벨 업! LV ${LV[levelIndex].id} 🎉`);
+      
+      // 레벨 2 이상부터 레벨업 시 바로 디버프 발생
+      if (levelIndex >= 1) {
+        const maxStack = getMaxDebuffStack(levelIndex + 1); // 레벨은 0-based이므로 +1
+        // 최대 중첩 수에 도달하지 않았으면 새 디버프 추가
+        if (activeDebuffs.length < maxStack) {
+          activateRandomDebuff();
+        }
+        // 생명 회복 및 목숨 +1 (레벨 4, 6, 9에서)
+        if (levelIndex === 3 || levelIndex === 5 || levelIndex === 8) {
+          hearts = Math.min(5, hearts + 1);
+          popBanner(`생명 회복! ❤️ (${hearts}개)`);
+        }
+      }
+      
+      // 다음 디버프 시간 설정 (레벨업 시점 기준)
+      if (levelIndex >= 1) {
+        debuffNextTime = performance.now() + getDebuffInterval(levelIndex + 1);
+      }
+    }
+  }
+  
+  function activateRandomDebuff() {
+    // 기존 디버프와 중복되지 않는 디버프 선택
+    const debuffTypes = Object.values(DEBUFFS);
+    const availableDebuffs = debuffTypes.filter(type => 
+      !activeDebuffs.some(d => d.type === type)
+    );
+    
+    if (availableDebuffs.length === 0) return; // 추가할 디버프가 없으면 반환
+    
+    const debuffType = availableDebuffs[Math.floor(Math.random() * availableDebuffs.length)];
+    const debuffInfo = DEBUFF_INFO[debuffType];
+    
+    if (!debuffInfo) return;
+    
+    // 디버프 추가
+    const newDebuff = {
+      type: debuffType,
+      startTime: performance.now(),
+      duration: debuffInfo.duration,
+    };
+    activeDebuffs.push(newDebuff);
+    
+    // UI 업데이트
+    updateDebuffUI();
+    
+    // 디버프 설명을 게임 화면에 표시 (우선순위 낮음 - 다른 메시지가 끝난 후 표시)
+    const debuffFullDesc = `${debuffInfo.name} 발생!\n${debuffInfo.desc}`;
+    popBanner(debuffFullDesc, 4000, 1); // priority = 1 (디버프)
+  }
+  
+  function updateDebuff() {
+    const now = performance.now();
+    
+    // 만료된 디버프 제거
+    activeDebuffs = activeDebuffs.filter(debuff => {
+      const elapsed = now - debuff.startTime;
+      return elapsed < debuff.duration;
+    });
+    
+    // 레벨 2 이상에서 시간 기반 디버프 발생 (레벨업 시 바로 발생하는 것 외에도)
+    if (levelIndex >= 1 && !paused && !gameOver) {
+      const maxStack = getMaxDebuffStack(levelIndex + 1);
+      if (activeDebuffs.length < maxStack && debuffNextTime > 0 && now >= debuffNextTime) {
+        activateRandomDebuff();
+        debuffNextTime = now + getDebuffInterval(levelIndex + 1);
+      }
+    }
+    
+    // UI 업데이트
+    updateDebuffUI();
+  }
+  
+  function updateDebuffUI() {
+    if (activeDebuffs.length > 0) {
+      // 첫 번째 디버프 표시 (나중에 여러 개 표시하도록 개선 가능)
+      const firstDebuff = activeDebuffs[0];
+      const debuffInfo = DEBUFF_INFO[firstDebuff.type];
+      const elapsed = performance.now() - firstDebuff.startTime;
+      const remaining = Math.max(0, firstDebuff.duration - elapsed);
+      const remainingSeconds = Math.ceil(remaining / 1000);
+      
+      if (debuffInfo) {
+        elDebuffText.textContent = activeDebuffs.length > 1 
+          ? `${debuffInfo.name} 외 ${activeDebuffs.length - 1}개`
+          : debuffInfo.name;
+        elDebuffDesc.textContent = debuffInfo.desc;
+        elDebuffDesc.hidden = false;
+        elDebuffTimer.textContent = `남은 시간: ${remainingSeconds}초`;
+        elDebuffTimer.hidden = false;
+        elDebuffNext.hidden = true;
+      }
+    } else {
+      // 디버프가 없을 때
+      elDebuffText.textContent = "대기 중";
+      elDebuffDesc.hidden = true;
+      elDebuffTimer.hidden = true;
+      
+      // 다음 디버프 예상 시간 표시
+      if (levelIndex >= 1) {
+        const interval = getDebuffInterval(levelIndex + 1);
+        const timeUntilNext = debuffNextTime > 0 
+          ? Math.max(0, debuffNextTime - performance.now())
+          : 0;
+        const secondsUntilNext = Math.ceil(timeUntilNext / 1000);
+        
+        if (secondsUntilNext > 0) {
+          elDebuffNext.textContent = `다음: ${secondsUntilNext}초 후`;
+        } else {
+          elDebuffNext.textContent = `다음: 레벨업 시`;
+        }
+        elDebuffNext.hidden = false;
+      } else {
+        elDebuffNext.textContent = `다음: LV 2부터`;
+        elDebuffNext.hidden = false;
+      }
     }
   }
 
@@ -502,7 +861,7 @@
   }
 
   function drawAgentSprite() {
-    const moving = Math.abs(agent.vx) > 0.2;
+    const moving = Math.abs(agent.vx) > 0.15; // 더 민감한 이동 감지 (애니메이션 개선)
     const kind = moving ? "run" : "idle";
     if (agent.anim.kind !== kind) {
       agent.anim.kind = kind;
@@ -514,7 +873,7 @@
     const frames = kind === "run" ? 4 : 2;
     const fw = 64,
       fh = 64;
-    const fps = kind === "run" ? 10 : 4;
+    const fps = kind === "run" ? 12 : 4; // 런 애니메이션 속도 증가 (10 -> 12)
 
     agent.anim.t += 1;
     if (agent.anim.t >= 60 / fps) {
@@ -576,11 +935,38 @@
 
   /** HUD */
   function updateHud() {
-    elScore.textContent = `점수 ${score}`;
-    elCombo.textContent = `콤보 ×${Math.max(1, comboCount || 1)}`;
+    elScore.textContent = score;
+    elCombo.textContent = `×${comboCount || 1}`;
     elLevel.textContent = `LV ${LV[levelIndex].id}`;
-    elTimer.textContent = `${Math.max(0, Math.ceil(timeLeft))}s`;
+    elHi.textContent = highScore;
+    updateHearts();
     updateComboUI();
+    updateDebuff();
+  }
+  
+  function updateHearts() {
+    const heartElements = elHearts.querySelectorAll(".heart");
+    heartElements.forEach((heart, index) => {
+      if (index < hearts) {
+        heart.classList.remove("lost");
+      } else {
+        heart.classList.add("lost");
+      }
+    });
+  }
+  
+  function loseHeart() {
+    if (hearts > 0) {
+      hearts--;
+      updateHearts();
+      vibrate(50);
+      shake(10, 250);
+      if (hearts <= 0) {
+        endGame();
+      } else {
+        popBanner(`생명 ${hearts}개 남음`);
+      }
+    }
   }
 
   /** Overlay */
@@ -588,9 +974,16 @@
     ovTitle.textContent = t;
     ovSub.textContent = s;
     btnStart.textContent = btn || "CONTINUE";
+    overlay.hidden = false;
     overlay.style.display = "grid";
+    // 튜토리얼 오버레이가 열려있으면 닫기
+    if (!tutorialOverlay.hidden) {
+      tutorialOverlay.hidden = true;
+      tutorialOverlay.style.display = "none";
+    }
   }
   function hideOverlay() {
+    overlay.hidden = true;
     overlay.style.display = "none";
   }
 
@@ -614,57 +1007,137 @@
 
     if (!paused && !gameOver) {
       const deltaTime = dt / 1000; // 초 단위로 변환
-      timeLeft -= deltaTime;
       
-      // 콤보 시간 감소 (게임 시간과 동일하게)
-      // 콤보가 활성화되어 있으면 시간을 감소
-      if (comboCount > 0) {
-        if (comboTimeLeft > 0) {
-          comboTimeLeft = Math.max(0, comboTimeLeft - deltaTime);
+      // 콤보 시간 감소
+      if (comboCount > 0 && comboTimeLeft > 0) {
+        let decayRate = 1.0;
+        // 월요병 또는 번아웃: 콤보 게이지 감소 속도 2배
+        if (hasDebuff(DEBUFFS.MONDAY_BLUES) || hasDebuff(DEBUFFS.BURNOUT)) {
+          decayRate = 2.0;
+        }
+        comboTimeLeft = Math.max(0, comboTimeLeft - deltaTime * decayRate);
+        if (comboTimeLeft <= 0) {
+          resetCombo();
         }
       }
+      
+      // 디버프 업데이트
+      updateDebuff();
+      
+      // 회의 소환: 3초마다 0.5초 정지
+      if (hasDebuff(DEBUFFS.MEETING_CALL)) {
+        const now = performance.now();
+        if (!meetingCallStopped) {
+          if (meetingCallNextStop === 0) {
+            meetingCallNextStop = now + 3000; // 첫 정지는 3초 후
+          } else if (now >= meetingCallNextStop) {
+            meetingCallStopped = true;
+            meetingCallNextStop = now + 500; // 0.5초 정지
+            agent.vx = 0; // 즉시 정지
+            popBanner("📞 긴급 회의! 정지", 500);
+          }
+        } else {
+          if (now >= meetingCallNextStop) {
+            meetingCallStopped = false;
+            meetingCallNextStop = now + 3000; // 3초 후 다음 정지
+          }
+        }
+      } else {
+        if (meetingCallStopped) {
+          meetingCallStopped = false;
+          meetingCallNextStop = 0;
+        }
+      }
+      
+      // 구독료 폭탄: 2초마다 -10점
+      if (hasDebuff(DEBUFFS.SUBSCRIPTION_BOMB)) {
+        const now = performance.now();
+        if (subscriptionBombNextCharge === 0 || now >= subscriptionBombNextCharge) {
+          score = Math.max(0, score - 10);
+          subscriptionBombNextCharge = now + 2000; // 2초마다
+          if (score > 0) {
+            popBanner("구독료 차감 -10점 💳", 1000);
+          }
+        }
+      } else {
+        subscriptionBombNextCharge = 0;
+      }
+      
+      // 회의 소환 중에는 캐릭터 이동 중지
+      if (meetingCallStopped) {
+        agent.vx = 0;
+      }
 
-      // spawn acceleration with combo (×2 이상부터 가속)
+      // spawn with level difficulty
       const baseSpawn = LV[levelIndex].spawn;
-      const spawnMul = Math.min(1.8, 1.0 + 0.18 * Math.max(0, comboCount - 1)); // cap 1.8x
-      const spawnInterval = baseSpawn / spawnMul;
+      const spawnInterval = baseSpawn * (0.92 + Math.random() * 0.16);
 
       if (ts >= nextSpawnAt) {
         spawnOne();
-        nextSpawnAt = ts + spawnInterval * (0.92 + Math.random() * 0.16);
+        nextSpawnAt = ts + spawnInterval;
       }
-      if (timeLeft <= 0) endGame();
-    }
 
-    // physics
-    const g = LV[levelIndex].g,
-      maxV = LV[levelIndex].maxSpeed;
-    for (let i = drops.length - 1; i >= 0; i--) {
-      const d = drops[i];
-      if (!d.alive) {
-        drops.splice(i, 1);
-        continue;
+      // physics (pause 상태일 때는 완전히 중지)
+      let g = LV[levelIndex].g;
+      let maxV = LV[levelIndex].maxSpeed;
+      
+      // 패닉셀: 아이템 낙하 속도 2배
+      if (hasDebuff(DEBUFFS.PANIC_SELL)) {
+        g *= 2.0;
+        maxV *= 2.0;
       }
-      d.vy = Math.min(maxV, d.vy + g * dt);
-      d.y += d.vy * dt;
-      if (hitAgent(d)) {
-        d.alive = false;
-        const itemColor = COLOR[d.type] || "#999";
-        spawnParticles(d.x, d.y, itemColor, d.type === ITEM.TAX || d.type === ITEM.DEBT ? 12 : 8);
-        collect(d.type);
-        drops.splice(i, 1);
-        continue;
-      }
-      if (d.y - d.r > world.h) {
-        d.alive = false;
-        // 아이템을 놓쳤을 때: TAX/DEBT는 콤보에 영향 없음 (피해야 하는 아이템)
-        // 먹어야 하는 아이템(money, point, coupon)만 놓치면 콤보 초기화
-        if (comboCount > 0 && d.type !== ITEM.TAX && d.type !== ITEM.DEBT) {
-          comboTimeLeft = 0;
+      
+      // 환율 폭등: 아이템 좌우 흔들림 (추가할 것)
+      const exchangeRateSpike = hasDebuff(DEBUFFS.EXCHANGE_RATE_SPIKE);
+      
+      for (let i = drops.length - 1; i >= 0; i--) {
+        const d = drops[i];
+        if (!d.alive) {
+          drops.splice(i, 1);
+          continue;
         }
-        drops.splice(i, 1);
+        d.vy = Math.min(maxV, d.vy + g * dt);
+        d.y += d.vy * dt;
+        
+        // 환율 폭등: 아이템 좌우 흔들림
+        if (exchangeRateSpike && !d.shakeOffset) {
+          d.shakeOffset = 0;
+          d.shakeSpeed = (Math.random() - 0.5) * 0.3;
+        }
+        if (exchangeRateSpike) {
+          d.shakeOffset += d.shakeSpeed * dt;
+          d.shakeSpeed += (Math.random() - 0.5) * 0.001 * dt;
+          d.shakeSpeed = Math.max(-0.5, Math.min(0.5, d.shakeSpeed));
+          d.x += d.shakeOffset * dt * 0.5;
+          d.x = Math.max(16, Math.min(world.w - 16, d.x)); // 화면 밖으로 나가지 않도록
+        }
+        if (hitAgent(d)) {
+          d.alive = false;
+          const itemColor = COLOR[d.type] || "#999";
+          spawnParticles(d.x, d.y, itemColor, d.type === ITEM.TAX || d.type === ITEM.DEBT ? 12 : 8);
+          collect(d.type);
+          drops.splice(i, 1);
+          continue;
+        }
+        if (d.y - d.r > world.h) {
+          d.alive = false;
+          // 아이템을 놓쳤을 때
+          if (d.type === ITEM.TAX || d.type === ITEM.DEBT) {
+            // TAX/DEBT를 놓치면 좋은 일 (생명 감소 없음)
+            // 콤보는 유지
+          } else {
+            // + 요소를 놓치면 생명 감소 및 콤보 초기화
+            loseHeart();
+            if (comboCount > 0) {
+              resetCombo();
+            }
+          }
+          drops.splice(i, 1);
+        }
       }
     }
+    // pause 상태일 때는 물리 업데이트를 완전히 중지
+    // 기존 아이템들은 그대로 유지 (화면에만 그려짐, 이동하지 않음)
     
     // Update particles
     for (let i = particles.length - 1; i >= 0; i--) {
@@ -680,8 +1153,33 @@
 
     // render
     clear();
+    
+    // 디버프 렌더링 효과 적용
+    ctx.save();
+    
+    // 번아웃: 화면 흑백 효과
+    if (hasDebuff(DEBUFFS.BURNOUT)) {
+      ctx.filter = "grayscale(100%)";
+    }
+    
     for (const d of drops) {
-      if (d.alive) drawDrop(d);
+      if (d.alive) {
+        // FOMO 증후군: - 아이템이 +로 위장
+        if (hasDebuff(DEBUFFS.FOMO_SYNDROME) && (d.type === ITEM.TAX || d.type === ITEM.DEBT)) {
+          // 위장: TAX/DEBT를 MONEY 색으로 그리기 (실제 타입은 유지)
+          const fakeType = ITEM.MONEY;
+          drawImageOrCircle(
+            IMG[fakeType],
+            d.x,
+            d.y,
+            d.r,
+            COLOR[fakeType] || "#999",
+            LABEL[fakeType] || "?"
+          );
+        } else {
+          drawDrop(d);
+        }
+      }
     }
     
     // Draw particles
@@ -706,6 +1204,30 @@
     }
     
     drawAgentSprite();
+    
+    ctx.restore(); // 디버프 필터 해제
+    
+    // 야근 모드: 화면 어두워짐 (오버레이)
+    if (hasDebuff(DEBUFFS.OVERTIME_MODE)) {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+      ctx.fillRect(0, 0, cvs.width, cvs.height);
+    }
+    
+    // 부동산 폭등: 화면 하단 30% 가려짐
+    if (hasDebuff(DEBUFFS.REAL_ESTATE_BOOM)) {
+      const overlayHeight = rect.height * 0.3;
+      ctx.fillStyle = "rgba(139, 111, 71, 0.7)"; // 갈색 반투명
+      ctx.fillRect(0, rect.height - overlayHeight, cvs.width, overlayHeight);
+      // 빌딩 실루엣 효과 (간단한 도형)
+      ctx.fillStyle = "rgba(92, 70, 50, 0.8)";
+      for (let i = 0; i < 5; i++) {
+        const x = (cvs.width / 6) * (i + 1);
+        const width = cvs.width / 10;
+        const height = overlayHeight * (0.5 + Math.random() * 0.5);
+        ctx.fillRect(x - width / 2, rect.height - height, width, height);
+      }
+    }
+    
     updateHud();
     
     // 콤보 게이지가 업데이트된 후에 콤보 리셋 처리
@@ -714,31 +1236,42 @@
       comboPendingReset = false;
       fill.style.width = '0%';
       multEl.textContent = '×1';
+      multEl.style.color = "";
+      multEl.style.animation = "";
     }
 
     if (shouldShake) {
       ctx.restore();
     }
 
-    // agent inertia
-    agent.vx *= 0.85;
+    // agent inertia (더 빠른 감속으로 반응성 향상)
+    agent.vx *= 0.80; // 0.85 -> 0.80 (더 빠른 감속)
 
     requestAnimationFrame(loop);
   }
 
   /** Flow */
-  function startGame(nextLv = null) {
-    if (nextLv != null) {
-      levelIndex = Math.min(nextLv, LV.length - 1);
-      levelIndex = Math.max(0, levelIndex);
-    }
+  function startGame() {
+    levelIndex = 0;
     score = 0;
+    hearts = 5;
     resetCombo();
-    timeLeft = LV[levelIndex].dur;
-    drops.length = 0;
-    particles.length = 0; // Clear particles
+    activeDebuffs = []; // 디버프 초기화
+    debuffNextTime = 0;
+    meetingCallNextStop = 0;
+    meetingCallStopped = false;
+    subscriptionBombNextCharge = 0;
+    lockedScore = 0;
+    bannerQueue = []; // 배너 큐 초기화
+    currentBannerEndTime = 0;
+    elDebuffText.textContent = "대기 중";
+    elDebuffDesc.hidden = true;
+    elDebuffTimer.hidden = true;
+    elDebuffNext.hidden = false;
+    drops.length = 0; // 기존 아이템 제거
+    particles.length = 0;
     gameOver = false;
-    paused = false;
+    paused = false; // 게임 시작 시 pause 해제
     nextSpawnAt = performance.now() + 400;
     // Reset agent position
     agent.x = world.w / 2;
@@ -746,6 +1279,7 @@
     agent.face = 1;
     agent.anim = { kind: "idle", t: 0, frame: 0 };
     hideOverlay();
+    updateHud();
   }
 
   function endGame() {
@@ -754,29 +1288,37 @@
     if (score > highScore) {
       highScore = score;
       localStorage.setItem("mc.highscore", String(highScore));
-      elHi.textContent = `최고 ${highScore}`;
+      elHi.textContent = highScore;
       btnReport.hidden = false;
       popBanner("신기록! 🎉");
     }
-    const nextLevel = (levelIndex + 1) % LV.length;
-    const levelText = nextLevel === 0 ? "처음부터" : `레벨 ${LV[nextLevel].id}`;
     showOverlay(
       "GAME OVER",
-      `점수 ${score} · 콤보 ×${Math.max(1, comboCount || 1)}`,
-      levelText === "처음부터" ? "다시 시작" : "NEXT LEVEL"
+      `점수 ${score} · 최고 콤보 ×${comboCount || 1} · 레벨 ${LV[levelIndex].id}`,
+      "다시 시작"
     );
   }
 
   /** Input */
   let pDown = false;
   function applyAgentX(nx) {
+    // 회의 소환: 캐릭터 정지
+    if (meetingCallStopped) return;
+    
+    // 커피 부족: 이동 속도 30% 감소
+    let speedMultiplier = 1.0;
+    if (hasDebuff(DEBUFFS.COFFEE_SHORTAGE)) {
+      speedMultiplier = 0.7;
+    }
+    
     const clamped = Math.max(agent.w / 2, Math.min(world.w - agent.w / 2, nx));
-    agent.vx = clamped - agent.x;
+    const targetVx = (clamped - agent.x) * speedMultiplier;
+    agent.vx = targetVx;
     if (Math.abs(agent.vx) > 0.1) agent.face = agent.vx > 0 ? 1 : -1;
     agent.x = clamped;
   }
   function onDown(e) {
-    if (paused && !gameOver) return;
+    if (paused || gameOver || meetingCallStopped) return; // pause, gameOver, 회의 소환 상태에서는 터치 입력 무시
     pDown = true;
     // 즉시 첫 번째 위치로 이동 (더 빠른 반응)
     const clientX = e.touches?.[0]?.clientX ?? e.clientX ?? e.changedTouches?.[0]?.clientX ?? 0;
@@ -786,14 +1328,18 @@
     }
   }
   function onMove(e) {
-    if (!pDown || paused) return;
+    if (!pDown || paused || gameOver || meetingCallStopped) return; // pause, gameOver, 회의 소환 상태에서는 이동 무시
     e.preventDefault?.(); // Prevent scrolling on mobile
     e.stopPropagation?.(); // 이벤트 버블링 방지
     const clientX = e.touches?.[0]?.clientX ?? e.clientX ?? e.changedTouches?.[0]?.clientX ?? 0;
     if (!clientX) return;
     const wx = clientToWorldX(clientX);
-    const edgeBoost = wx < world.w * 0.15 || wx > world.w * 0.85 ? 1.25 : 1.0;
-    const sensitivity = 0.45; // 모바일 반응성 향상
+    const edgeBoost = wx < world.w * 0.15 || wx > world.w * 0.85 ? 1.3 : 1.0;
+    let sensitivity = 0.65; // 이동 속도 증가에 맞춰 반응성 향상 (0.45 -> 0.65)
+    // 커피 부족: 이동 속도 30% 감소
+    if (hasDebuff(DEBUFFS.COFFEE_SHORTAGE)) {
+      sensitivity *= 0.7;
+    }
     const dx = (wx - agent.x) * sensitivity * edgeBoost;
     applyAgentX(agent.x + dx);
   }
@@ -807,20 +1353,32 @@
   }
 
   window.addEventListener("keydown", (e) => {
+    if (gameOver) return; // 게임 오버 상태에서는 키 입력 무시
     if (paused && e.key === " ") {
-      startGame(levelIndex);
+      // pause 상태에서 스페이스바를 누르면 게임 재개
+      paused = false;
+      hideOverlay();
       return;
     }
+    if (paused || meetingCallStopped) return; // pause 또는 회의 소환 상태에서는 이동 입력 무시
+    let moveSpeed = agent.speed * 35; // 이동 속도 증가 (28 -> 35)
+    // 커피 부족: 이동 속도 30% 감소
+    if (hasDebuff(DEBUFFS.COFFEE_SHORTAGE)) {
+      moveSpeed *= 0.7;
+    }
     if (e.key === "ArrowLeft") {
-      applyAgentX(agent.x - agent.speed * 28);
+      applyAgentX(agent.x - moveSpeed);
     }
     if (e.key === "ArrowRight") {
-      applyAgentX(agent.x + agent.speed * 28);
+      applyAgentX(agent.x + moveSpeed);
     }
     if (e.key === " ") {
       paused = !paused;
-      if (paused) showOverlay("PAUSED", "계속하려면 시작", "CONTINUE");
-      else hideOverlay();
+      if (paused) {
+        showOverlay("PAUSED", "계속하려면 CONTINUE 버튼을 누르세요", "CONTINUE");
+      } else {
+        hideOverlay();
+      }
     }
   });
 
@@ -856,17 +1414,43 @@
 
   /** UI */
   btnStart.addEventListener("click", () => {
-    if (gameOver) {
-      const nextLevel = (levelIndex + 1) % LV.length;
-      startGame(nextLevel);
-    } else {
-      startGame(levelIndex);
+    // pause 상태에서 재개
+    if (paused && !gameOver) {
+      paused = false;
+      hideOverlay();
+      return;
     }
+    // 게임 시작
+    startGame();
+  });
+  
+  btnTutorial.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // 메인 오버레이 숨기고 튜토리얼 오버레이 표시
+    overlay.hidden = true;
+    overlay.style.display = "none";
+    tutorialOverlay.hidden = false;
+    tutorialOverlay.style.display = "grid";
+  });
+  
+  btnCloseTutorial.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // 튜토리얼 오버레이 숨기고 메인 오버레이 표시
+    tutorialOverlay.hidden = true;
+    tutorialOverlay.style.display = "none";
+    overlay.hidden = false;
+    overlay.style.display = "grid";
   });
   btnPause.addEventListener("click", () => {
+    if (gameOver) return; // 게임 오버 상태에서는 pause 버튼 작동 안 함
     paused = !paused;
-    if (paused) showOverlay("PAUSED", "계속하려면 시작", "CONTINUE");
-    else hideOverlay();
+    if (paused) {
+      showOverlay("PAUSED", "계속하려면 CONTINUE 버튼을 누르세요", "CONTINUE");
+    } else {
+      hideOverlay();
+    }
   });
   btnMute.addEventListener("click", () => {
     muted = !muted;
@@ -1024,6 +1608,13 @@
 
   /** Boot */
   elLevel.textContent = `LV ${LV[levelIndex].id}`;
+  elHi.textContent = highScore;
+  elDebuffText.textContent = "대기 중";
+  elDebuffDesc.hidden = true;
+  elDebuffTimer.hidden = true;
+  elDebuffNext.textContent = "다음: LV 2부터";
+  elDebuffNext.hidden = false;
+  updateHearts();
   showOverlay(
     "머니 캐쳐",
     "좌우/스와이프 혹은 방향키 이동. 떨어지는 아이템을 받으세요!",

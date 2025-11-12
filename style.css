@@ -44,53 +44,49 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: clamp(4px, 1vw, 6px) clamp(6px, 1.5vw, 8px);
   background: linear-gradient(180deg, #8B6F47, #6B5438);
-  border-bottom: 4px solid #5C4632;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  border-bottom: clamp(2px, 0.8vw, 3px) solid #5C4632;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   border-style: ridge;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: clamp(4px, 1vw, 6px);
 }
-.topbar h1 {
-  margin: 0;
-  font-size: clamp(8px, 2.5vw, 12px);
-  color: #FFFFFF;
-  text-shadow: 2px 2px 0px #000000, 4px 4px 0px rgba(0, 0, 0, 0.3);
-  white-space: nowrap;
-}
-.stats {
+.topbar-left {
   display: flex;
-  gap: clamp(8px, 2vw, 14px);
-  color: #FFE66D;
-  flex: 1;
-  justify-content: center;
-  font-size: clamp(7px, 2vw, 10px);
-  text-shadow: 1px 1px 0px #000000;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-.stats span {
-  white-space: nowrap;
+  gap: clamp(4px, 1vw, 5px);
+  flex-shrink: 0;
 }
 .toggles {
   display: flex;
-  gap: 6px;
+  gap: clamp(4px, 1vw, 5px);
   flex-shrink: 0;
 }
 .stage {
-  display: grid;
-  place-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: clamp(8px, 2vw, 12px);
   background: linear-gradient(180deg, #87CEEB 0%, #5C94FC 100%);
   flex: 1;
   min-height: 0;
+  overflow-x: auto;
+  position: relative; /* 오버레이의 기준점 */
+}
+.game-container {
+  display: flex;
+  gap: clamp(12px, 3vw, 20px);
+  align-items: flex-start;
+  max-width: 1200px;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 .canvas-wrap {
   position: relative;
   width: 100%;
   max-width: 440px;
-  margin: 0 auto;
+  flex-shrink: 0;
+  height: fit-content;
 }
 canvas {
   width: 100%;
@@ -159,17 +155,7 @@ canvas {
   white-space: nowrap;
 }
 
-.controls {
-  display: flex;
-  gap: clamp(8px, 2vw, 12px);
-  justify-content: center;
-  padding: clamp(8px, 2vw, 12px);
-  background: linear-gradient(180deg, #8B6F47, #6B5438);
-  border-top: clamp(2px, 1vw, 4px) solid #5C4632;
-  box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.3);
-  border-style: ridge;
-  flex-wrap: wrap;
-}
+/* .controls는 더 이상 사용하지 않음 (헤더바로 이동) */
 button,
 .link {
   appearance: none;
@@ -205,9 +191,11 @@ button,
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2);
 }
 .ghost.sm {
-  padding: clamp(6px, 1.5vw, 8px) clamp(8px, 2vw, 10px);
-  border-radius: clamp(4px, 1vw, 6px);
-  min-height: 36px;
+  padding: clamp(4px, 1.2vw, 6px) clamp(6px, 1.5vw, 8px);
+  border-radius: clamp(3px, 0.8vw, 5px);
+  min-height: clamp(28px, 3.5vw, 32px);
+  font-size: clamp(7px, 1.8vw, 9px);
+  white-space: nowrap;
 }
 .link {
   color: #FFE66D;
@@ -232,6 +220,13 @@ button[hidden] {
   place-items: center;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(2px);
+  z-index: 100;
+}
+.overlay[hidden] {
+  display: none !important;
+}
+#tutorial-overlay {
+  z-index: 200; /* 튜토리얼 오버레이가 메인 오버레이보다 위에 */
 }
 .overlay .panel {
   background: linear-gradient(180deg, #8B6F47, #6B5438);
@@ -277,75 +272,292 @@ button[hidden] {
   background: linear-gradient(180deg, #FFE66D, #FFD93D);
   border: clamp(2px, 0.8vw, 3px) solid #5C4632;
   color: #000000;
-  padding: clamp(8px, 2vw, 10px) clamp(10px, 2.5vw, 12px);
+  padding: clamp(10px, 2.5vw, 14px) clamp(12px, 3vw, 16px);
   border-radius: clamp(6px, 1.5vw, 8px);
   font-weight: 800;
-  font-size: clamp(9px, 2.5vw, 12px);
+  font-size: clamp(10px, 2.8vw, 14px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.5);
   border-style: ridge;
   text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5);
-  white-space: nowrap;
+  white-space: normal;
   z-index: 1000;
-  max-width: 90%;
+  max-width: 85%;
   word-break: keep-all;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+  text-align: center;
+  line-height: 1.5;
 }
 .banner[hidden] {
   display: none;
   opacity: 0;
 }
 
+/* 사이드바 스타일 (테트리스 스타일) */
+.sidebar {
+  background: linear-gradient(180deg, #8B6F47, #6B5438);
+  border: clamp(3px, 1vw, 4px) solid #5C4632;
+  border-radius: clamp(8px, 2vw, 12px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  border-style: ridge;
+  padding: clamp(10px, 2.5vw, 14px);
+  width: clamp(180px, 22vw, 240px); /* 고정 너비 */
+  min-width: clamp(180px, 22vw, 240px);
+  max-width: clamp(180px, 22vw, 240px);
+  flex-shrink: 0;
+  /* 캔버스와 동일한 높이를 위해 */
+  display: flex;
+  flex-direction: column;
+  /* 높이는 JavaScript에서 동적으로 설정하거나, CSS로 캔버스 높이와 맞춤 */
+  box-sizing: border-box;
+}
+.sidebar-header {
+  margin-bottom: clamp(10px, 2.5vw, 14px);
+  text-align: center;
+  border-bottom: clamp(2px, 0.8vw, 3px) solid #5C4632;
+  padding-bottom: clamp(6px, 1.5vw, 10px);
+}
+.sidebar-header h1 {
+  margin: 0;
+  font-size: clamp(8px, 1.5vw, 12px);
+  color: #FFFFFF;
+  text-shadow: 2px 2px 0px #000000, 4px 4px 0px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 2vw, 12px);
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+.stat-card {
+  background: rgba(44, 24, 16, 0.6);
+  border: clamp(2px, 0.8vw, 3px) solid #5C4632;
+  border-radius: clamp(6px, 1.5vw, 8px);
+  padding: clamp(8px, 2vw, 10px);
+  border-style: ridge;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+.stat-label {
+  font-size: clamp(8px, 2vw, 10px);
+  color: #FFE66D;
+  text-shadow: 1px 1px 0px #000000;
+  margin-bottom: clamp(5px, 1.2vw, 7px);
+  text-align: center;
+}
+.stat-value {
+  font-size: clamp(14px, 3.5vw, 20px);
+  color: #FFFFFF;
+  text-shadow: 2px 2px 0px #000000, 4px 4px 0px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  font-weight: bold;
+}
+.combo-value {
+  color: #FFE66D;
+  font-size: clamp(16px, 4vw, 24px);
+}
+.hearts-container {
+  display: flex;
+  justify-content: center;
+  gap: clamp(4px, 1vw, 8px);
+  flex-wrap: wrap;
+}
+.heart {
+  font-size: clamp(9px, 4.5vw, 14px);
+  filter: drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.5));
+  transition: transform 0.2s, opacity 0.3s;
+}
+.heart.lost {
+  opacity: 0.3;
+  transform: scale(0.8);
+}
+.debuff-label {
+  color: #FF6B6B !important;
+}
+.debuff-value {
+  color: #FF6B6B !important;
+  font-size: clamp(11px, 2.8vw, 14px);
+  line-height: 1.3;
+  word-break: keep-all;
+  min-height: clamp(24px, 6vw, 32px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: bold;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+.debuff-value:empty::after {
+  content: "대기 중";
+  color: #999;
+  font-weight: normal;
+}
+.debuff-desc {
+  font-size: clamp(7px, 1.8vw, 9px);
+  color: #FFE66D;
+  text-align: center;
+  margin-top: clamp(2px, 0.5vw, 4px);
+  line-height: 1.3;
+  word-break: keep-all;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
+  overflow-wrap: break-word;
+}
+.debuff-timer {
+  font-size: clamp(8px, 2vw, 11px);
+  color: #FFE66D;
+  text-align: center;
+  margin-top: clamp(4px, 1vw, 6px);
+  text-shadow: 1px 1px 0px #000000;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.debuff-next {
+  font-size: clamp(7px, 1.8vw, 9px);
+  color: #999;
+  text-align: center;
+  margin-top: clamp(4px, 1vw, 6px);
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
+  line-height: 1.3;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+#debuff-card {
+  min-height: clamp(90px, 22vw, 120px); /* 디버프 카드만 고정 높이 */
+}
+
+/* 튜토리얼 패널 */
+.tutorial-panel {
+  max-width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.tutorial-content {
+  text-align: left;
+  font-size: clamp(8px, 2vw, 10px);
+  color: #FFFFFF;
+  text-shadow: 1px 1px 0px #000000;
+  line-height: 1.6;
+  margin: clamp(10px, 2.5vw, 12px) 0;
+}
+.tutorial-content p {
+  margin: clamp(8px, 2vw, 10px) 0;
+}
+.tutorial-content ul {
+  margin: clamp(6px, 1.5vw, 8px) 0;
+  padding-left: clamp(20px, 5vw, 24px);
+}
+.tutorial-content li {
+  margin: clamp(4px, 1vw, 6px) 0;
+  word-break: keep-all;
+}
+.tutorial-content strong {
+  color: #FFE66D;
+}
+
+/* Pulse animation for MAX COMBO */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
+}
+
 /* 모바일 최적화 */
+@media (max-width: 768px) {
+  .game-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
+  }
+  
+  .canvas-wrap {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  canvas {
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 480px) {
   html, body {
     font-size: 12px;
   }
   
   .topbar {
-    padding: 6px 8px;
+    padding: clamp(4px, 1vw, 5px) clamp(5px, 1.2vw, 6px);
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: space-between;
   }
   
-  .topbar h1 {
-    font-size: 9px;
-    width: 100%;
-    text-align: center;
-    margin-bottom: 4px;
-  }
-  
-  .stats {
-    gap: 4px;
-    font-size: 7px;
-    justify-content: center;
-    width: 100%;
-    order: 2;
+  .topbar-left {
+    order: 1;
+    display: flex;
+    gap: clamp(3px, 0.8vw, 4px);
   }
   
   .toggles {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    margin-top: 4px;
+    order: 2;
+    display: flex;
+    gap: clamp(3px, 0.8vw, 4px);
+  }
+  
+  .ghost.sm {
+    padding: clamp(4px, 1vw, 5px) clamp(5px, 1.2vw, 6px);
+    font-size: clamp(7px, 1.8vw, 8px);
+    min-height: clamp(26px, 3.2vw, 28px);
   }
   
   .stage {
     padding: 4px;
   }
   
-  .controls {
-    padding: 8px 4px;
-    gap: 6px;
-    flex-wrap: wrap;
+  .game-container {
+    gap: 8px;
   }
   
-  .controls button,
-  .controls .link {
-    flex: 1;
-    min-width: 120px;
-    max-width: 200px;
+  .sidebar {
+    padding: 10px;
+  }
+  
+  .sidebar-header h1 {
+    font-size: 12px;
+  }
+  
+  .stat-label {
+    font-size: 8px;
+  }
+  
+  .stat-value {
+    font-size: 14px;
+  }
+  
+  .combo-value {
+    font-size: 16px;
+  }
+  
+  .heart {
+    font-size: 18px;
   }
   
   .overlay .panel {
@@ -373,6 +585,15 @@ button[hidden] {
   .combo-bar {
     width: clamp(100px, 35vw, 180px);
   }
+  
+  .tutorial-panel {
+    max-width: 95%;
+    max-height: 80vh;
+  }
+  
+  .tutorial-content {
+    font-size: 7px;
+  }
 }
 
 /* 작은 화면 (세로 모드) */
@@ -394,9 +615,7 @@ button[hidden] {
     padding: 4px;
   }
   
-  .controls {
-    padding: 6px 4px;
-  }
+  /* .controls는 더 이상 사용하지 않음 */
   
   .overlay .panel {
     padding: 12px 8px;
@@ -409,19 +628,15 @@ button[hidden] {
   .topbar {
     padding: 4px 6px;
     flex-wrap: nowrap;
+    justify-content: space-between;
   }
   
-  .topbar h1 {
-    font-size: 8px;
-    width: auto;
-    margin-bottom: 0;
+  .topbar-left {
+    order: 1;
   }
   
-  .stats {
-    font-size: 7px;
-    gap: 6px;
-    order: 0;
-    width: auto;
+  .toggles {
+    order: 2;
   }
   
   .stage {
@@ -442,9 +657,9 @@ button[hidden] {
   }
   
   .ghost.sm {
-    min-height: 36px;
-    padding: 8px 10px;
-    font-size: clamp(9px, 2.5vw, 11px);
+    min-height: clamp(32px, 4vw, 34px);
+    padding: clamp(4px, 1.2vw, 6px) clamp(6px, 1.5vw, 8px);
+    font-size: clamp(7px, 1.8vw, 9px);
   }
   
   /* 터치 영역 확대 */

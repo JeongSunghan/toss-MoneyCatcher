@@ -18,13 +18,9 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>머니 캐쳐</h1>
-    <div class="stats">
-      <span id="score">점수 0</span>
-      <span id="combo">콤보 ×1</span>
-      <span id="timer">60s</span>
-      <span id="level">LV 1</span>
-      <span id="hi">최고 0</span>
+    <div class="topbar-left">
+      <button id="btn-share" class="ghost sm">공유</button>
+      <button id="btn-report" class="ghost sm" hidden>토스 앱 열기</button>
     </div>
     <div class="toggles">
       <button id="btn-pause" title="일시정지" class="ghost sm">Ⅱ</button>
@@ -33,35 +29,108 @@
   </header>
 
   <main class="stage">
-    <div class="canvas-wrap">
-      <canvas id="game" width="360" height="520" aria-label="게임 화면" role="img"></canvas>
+    <div class="game-container">
+      <div class="canvas-wrap">
+        <canvas id="game" width="360" height="520" aria-label="게임 화면" role="img"></canvas>
 
-      <!-- 콤보 바 -->
-      <div class="combo-wrap">
-        <div class="combo-label">COMBO</div>
-        <div class="combo-bar"><div id="combo-fill" class="combo-fill"></div></div>
-        <div id="combo-mult" class="combo-mult">×1</div>
+        <!-- 콤보 바 (게임 내부) -->
+        <div class="combo-wrap">
+          <div class="combo-label">COMBO</div>
+          <div class="combo-bar"><div id="combo-fill" class="combo-fill"></div></div>
+          <div id="combo-mult" class="combo-mult">×1</div>
+        </div>
+
+        <!-- 배너 -->
+        <div id="banner" class="banner" hidden></div>
       </div>
 
-      <!-- 오버레이 -->
-      <div id="overlay" class="overlay">
-        <div class="panel">
-          <h2 id="ov-title">머니 캐쳐</h2>
-          <p id="ov-sub">좌우 스와이프 또는 방향키로 요원을 이동하세요.</p>
-          <div class="row"><button id="btn-start" class="primary">GAME START</button></div>
-          <div class="row small"><span>같은 종류 연속 수집 시 콤보 유지</span></div>
+      <!-- 사이드바: 점수 및 정보 표시 (테트리스 스타일) -->
+      <aside id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <h1>머니 캐쳐</h1>
+        </div>
+        <div class="sidebar-content">
+          <div class="stat-card">
+            <div class="stat-label">점수</div>
+            <div id="score" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">콤보</div>
+            <div id="combo" class="stat-value combo-value">×1</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">레벨</div>
+            <div id="level" class="stat-value">LV 1</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">생명</div>
+            <div id="hearts" class="hearts-container">
+              <span class="heart">❤️</span>
+              <span class="heart">❤️</span>
+              <span class="heart">❤️</span>
+              <span class="heart">❤️</span>
+              <span class="heart">❤️</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">최고 점수</div>
+            <div id="hi" class="stat-value">0</div>
+          </div>
+          <div class="stat-card" id="debuff-card">
+            <div class="stat-label debuff-label">디버프</div>
+            <div id="debuff-text" class="stat-value debuff-value">대기 중</div>
+            <div id="debuff-desc" class="debuff-desc" hidden></div>
+            <div id="debuff-timer" class="debuff-timer" hidden></div>
+            <div id="debuff-next" class="debuff-next"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- 오버레이 -->
+    <div id="overlay" class="overlay">
+      <div class="panel">
+        <h2 id="ov-title">머니 캐쳐</h2>
+        <p id="ov-sub">좌,우 스와이프 또는 방향키로 요원을 이동하세요.</p>
+        <div class="row">
+          <button id="btn-start" class="primary">GAME START</button>
+        </div>
+        <div class="row">
+          <button id="btn-tutorial" class="ghost">TUTORIAL</button>
+        </div>
+        <div class="row small"><span>같은 종류 연속 수집 시 콤보 유지</span></div>
+      </div>
+    </div>
+
+    <!-- 튜토리얼 오버레이 -->
+    <div id="tutorial-overlay" class="overlay" hidden>
+      <div class="panel tutorial-panel">
+        <h2>튜토리얼</h2>
+        <div class="tutorial-content">
+          <p><strong>게임 방법:</strong></p>
+          <ul>
+            <li>좌우 스와이프 또는 방향키로 요원을 이동하세요</li>
+            <li>돈(₩), 포인트(P), 쿠폰(%)을 받으세요</li>
+            <li>세금(TAX), 빚(DEBT)은 피하세요</li>
+            <li>돈, 포인트, 쿠폰 을 연속으로 받으면 콤보가 쌓입니다</li>
+            <li>콤보가 높을수록 점수 배수가 증가합니다</li>
+            <li>아이템을 놓치면 생명이 감소합니다 (최대 5개) </li>
+          </ul>
+          <p><strong>콤보 배수:</strong></p>
+          <ul>
+            <li>10+ 콤보: 0.25배</li>
+            <li>20+ 콤보: 0.5배</li>
+            <li>30+ 콤보: 0.75배</li>
+            <li>40+ 콤보: 1.25배</li>
+            <li>50+ 콤보: 1.5배 (MAX COMBO!!!)</li>
+          </ul>
+        </div>
+        <div class="row">
+          <button id="btn-close-tutorial" class="primary">닫기</button>
         </div>
       </div>
-
-      <!-- 배너 -->
-      <div id="banner" class="banner" hidden></div>
     </div>
   </main>
-
-  <footer class="controls">
-    <button id="btn-share" class="ghost">공유</button>
-    <button id="btn-report" class="ghost" hidden>토스 앱 열기</button>
-  </footer>
 
   <!-- 선택 오디오
   <audio id="sfx-catch"  src="assets/catch_coin.mp3" preload="auto"></audio>
