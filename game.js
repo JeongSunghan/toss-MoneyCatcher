@@ -85,10 +85,12 @@
     elDebuffDesc = $("debuff-desc"),
     elDebuffTimer = $("debuff-timer"),
     elDebuffNext = $("debuff-next");
-  const overlay = $("overlay"),
+  const prologueOverlay = $("prologue-overlay"),
+    overlay = $("overlay"),
     tutorialOverlay = $("tutorial-overlay"),
     ovTitle = $("ov-title"),
     ovSub = $("ov-sub"),
+    btnStartPrologue = $("btn-start-prologue"),
     btnStart = $("btn-start"),
     btnTutorial = $("btn-tutorial"),
     btnCloseTutorial = $("btn-close-tutorial");
@@ -1168,6 +1170,35 @@
     }
   });
 
+  // 프롤로그 버튼 클릭 이벤트
+  if (btnStartPrologue) {
+    btnStartPrologue.addEventListener("click", () => {
+      // 프롤로그 페이드아웃
+      if (prologueOverlay) {
+        prologueOverlay.style.transition = "opacity 0.5s ease-out";
+        prologueOverlay.style.opacity = "0";
+        
+        // 페이드아웃 완료 후 메인 메뉴 표시
+        setTimeout(() => {
+          if (prologueOverlay) {
+            prologueOverlay.hidden = true;
+            prologueOverlay.style.display = "none";
+          }
+          if (overlay) {
+            overlay.hidden = false;
+            overlay.style.display = "grid";
+            overlay.style.opacity = "0";
+            overlay.style.transition = "opacity 0.5s ease-in";
+            // 페이드인 시작
+            setTimeout(() => {
+              if (overlay) overlay.style.opacity = "1";
+            }, 10);
+          }
+        }, 500);
+      }
+    });
+  }
+  
   btnStart.addEventListener("click", () => {
     if (paused && !gameOver) {
       paused = false;
@@ -1380,11 +1411,17 @@
   elDebuffNext.textContent = "다음: LV 2부터";
   elDebuffNext.hidden = false;
   updateHearts();
-  showOverlay(
-    "머니 캐쳐",
-    "좌우 스와이프로 이동하여 떨어지는 돈을 받으세요!",
-    "GAME START"
-  );
+  
+  // 프롤로그 화면 표시 (초기 화면)
+  if (prologueOverlay) {
+    prologueOverlay.hidden = false;
+    prologueOverlay.style.display = "grid";
+  }
+  if (overlay) {
+    overlay.hidden = true;
+    overlay.style.display = "none";
+  }
+  
   requestAnimationFrame(loop);
   console.log("%c[MoneyCatcher]", "color:#5C94FC; font-size: 14px;");
   
