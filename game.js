@@ -984,16 +984,12 @@
   // 메인 게임 루프
   // ============================================
   let prev = 0;
-  let lastRenderTime = 0; // 마지막 렌더링 시간 (모바일 최적화)
   function loop(ts) {
-    // 모바일에서 30fps로 조정 (33.33ms = 30fps), 데스크톱은 60fps (16ms)
-    const targetFPS = isMobile() ? 33.33 : 16;
+    // 모든 플랫폼에서 60fps (16.67ms = 60fps)
+    const targetFPS = 16.67;
     const dt = prev ? Math.min(ts - prev, 100) : targetFPS;
     prev = ts;
     const now = performance.now();
-    
-    // 모바일에서 렌더링 스킵 (물리 업데이트는 계속)
-    const shouldRender = !isMobile() || (ts - lastRenderTime >= 33.33);
 
     const shouldShake = world.shakeT > now;
     if (shouldShake) {
@@ -1215,10 +1211,8 @@
       ItemSystem.updateParticles(dt, world);
     }
 
-    // 렌더링 (모바일에서 프레임 스킵)
-    if (shouldRender) {
-      lastRenderTime = ts;
-      if (RenderSystem?.render) {
+    // 렌더링 (60fps 유지)
+    if (RenderSystem?.render) {
       RenderSystem.render(ctx, cvs, world, {
         IMG,
         COLOR,
@@ -1287,7 +1281,6 @@
         ctx.fillStyle = "rgba(139, 111, 71, 0.7)";
         ctx.fillRect(0, canvasHeight - overlayHeight, canvasWidth, overlayHeight);
       }
-      } // shouldRender 조건 종료
     }
     
     updateHud();
