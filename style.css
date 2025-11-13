@@ -120,6 +120,51 @@ canvas {
   border-style: ridge;
   max-width: 95%;
   backdrop-filter: blur(4px);
+  z-index: 10;
+}
+
+/* 하트 표시 (게임 내부) */
+.hearts-display {
+  position: absolute;
+  left: clamp(6px, 1.5vw, 10px);
+  bottom: clamp(6px, 1.5vw, 10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(2px, 0.8vw, 4px);
+  background: rgba(154, 186, 131, 0.95);
+  border: clamp(1.5px, 0.6vw, 2px) solid #5C4632;
+  border-radius: clamp(4px, 1vw, 6px);
+  padding: clamp(3px, 0.8vw, 5px) clamp(5px, 1.2vw, 8px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  border-style: ridge;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  line-height: 1;
+}
+
+.heart-icon {
+  font-size: clamp(12.5px, 1vw , 10px);
+  filter: drop-shadow(1px 1px 0px rgba(0, 0, 0, 0.5));
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  margin: 0;
+  padding: 0;
+  padding-bottom: 4.5px;
+}
+
+.hearts-count {
+  font-size: clamp(9px, 2.2vw, 13px);
+  color: #FFFFFF;
+  text-shadow: 1px 1px 0px #000000;
+  font-weight: bold;
+  font-family: "Press Start 2P", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  line-height: 1;
+  display: flex;
+  align-items: center;
 }
 .combo-label {
   font-size: clamp(7px, 2vw, 10px);
@@ -233,22 +278,23 @@ button[hidden] {
   border: clamp(3px, 1vw, 4px) solid #5C4632;
   border-radius: clamp(10px, 2.5vw, 12px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.3);
-  padding: clamp(14px, 3.5vw, 18px);
+  padding: clamp(20px, 5vw, 28px);
   text-align: center;
-  max-width: 92%;
+  max-width: 85%;
+  min-width: 280px;
   border-style: ridge;
   margin: 10px;
 }
 .overlay .panel h2 {
-  margin: 0 0 clamp(6px, 1.5vw, 8px) 0;
-  font-size: clamp(9px, 2.5vw, 12px);
+  margin: 0 0 clamp(8px, 2vw, 12px) 0;
+  font-size: clamp(14px, 3.5vw, 18px);
   color: #FFFFFF;
   text-shadow: 2px 2px 0px #000000, 4px 4px 0px rgba(0, 0, 0, 0.3);
   line-height: 1.4;
   word-break: keep-all;
 }
 .overlay .panel p {
-  font-size: clamp(8px, 2vw, 10px);
+  font-size: clamp(11px, 2.5vw, 14px);
   color: #FFE66D;
   text-shadow: 1px 1px 0px #000000;
   line-height: 1.5;
@@ -430,6 +476,7 @@ button[hidden] {
 }
 #debuff-card {
   min-height: clamp(90px, 22vw, 120px); /* 디버프 카드만 고정 높이 */
+  background: rgba(44, 24, 16, 0.4) !important; /* 배경을 더 투명하게 (기존 0.6에서 0.4로) */
 }
 
 /* 튜토리얼 패널 */
@@ -460,6 +507,20 @@ button[hidden] {
 .tutorial-content strong {
   color: #FFE66D;
 }
+.tutorial-content .debuff-list {
+  font-size: clamp(7px, 1.8vw, 9px);
+  max-height: 200px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.2);
+  padding: clamp(8px, 2vw, 10px);
+  border-radius: clamp(4px, 1vw, 6px);
+  margin: clamp(6px, 1.5vw, 8px) 0;
+}
+.tutorial-content .debuff-list li {
+  margin: clamp(3px, 0.8vw, 4px) 0;
+  font-size: clamp(7px, 1.8vw, 9px);
+}
+
 
 /* Pulse animation for MAX COMBO */
 @keyframes pulse {

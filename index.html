@@ -40,6 +40,12 @@
           <div id="combo-mult" class="combo-mult">×1</div>
         </div>
 
+        <!-- 하트 표시 (게임 내부) -->
+        <div id="hearts-display" class="hearts-display">
+          <span class="heart-icon">❤️</span>
+          <span id="hearts-count" class="hearts-count">×5</span>
+        </div>
+
         <!-- 배너 -->
         <div id="banner" class="banner" hidden></div>
       </div>
@@ -61,16 +67,6 @@
           <div class="stat-card">
             <div class="stat-label">레벨</div>
             <div id="level" class="stat-value">LV 1</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">생명</div>
-            <div id="hearts" class="hearts-container">
-              <span class="heart">❤️</span>
-              <span class="heart">❤️</span>
-              <span class="heart">❤️</span>
-              <span class="heart">❤️</span>
-              <span class="heart">❤️</span>
-            </div>
           </div>
           <div class="stat-card">
             <div class="stat-label">최고 점수</div>
@@ -132,14 +128,25 @@
     </div>
   </main>
 
-  <!-- 선택 오디오
-  <audio id="sfx-catch"  src="assets/catch_coin.mp3" preload="auto"></audio>
-  <audio id="sfx-penalty" src="assets/penalty.mp3"    preload="auto"></audio>
-  <audio id="sfx-combo"   src="assets/combo_up.mp3"    preload="auto"></audio>
-  <audio id="sfx-clear"   src="assets/level_clear.mp3" preload="auto"></audio>
-  <audio id="bgm"         src="assets/bgm_loop.mp3"    preload="auto" loop></audio>
-  -->
+  <!-- 선택 오디오 -->
+  <audio id="sfx-catch"  src="assets/sound/catch_coin.mp3" preload="auto"></audio>
+  <audio id="sfx-penalty" src="assets/sound/minus item.mp3"    preload="auto"></audio>
+  <audio id="sfx-combo"   src="assets/sound/combo_up.mp3"    preload="auto"></audio>
+  <audio id="sfx-clear"   src="assets/sound/level_up.mp3" preload="auto"></audio>
+  <audio id="bgm"         src="assets/sound/background.mp3"    preload="auto" loop></audio>
+ 
 
+  <!-- 모듈 스크립트 (순서 중요) -->
+  <script src="js/config.js"></script>
+  <script src="js/debuffs.js"></script>
+  <script src="js/items.js"></script>
+  <script src="js/combo.js"></script>
+  <script src="js/agent.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/ui.js"></script>
+  
+  <!-- 메인 게임 스크립트 -->
   <script src="game.js"></script>
 </body>
 </html>
