@@ -177,6 +177,11 @@
   let hearts = 5;
   elHi.textContent = `₩${highScore.toLocaleString('ko-KR')}`;
   
+  // 통계 추적 변수
+  let gameStartTime = 0;        // 게임 시작 시간
+  let maxComboReached = 0;      // 최고 콤보
+  let totalDebtAvoided = 0;     // 피한 빚 총액
+  
   // 관리자 모드
   let adminMode = {
     enabled: false,
@@ -331,7 +336,7 @@
    * @param {number} volume - 볼륨 (0.0 ~ 1.0, 기본값 0.7)
    * @param {number} skipTime - 건너뛸 시간 (초, 기본값 0.1)
    */
-  function playSound(soundId, volume = 0.7, skipTime = 0.1) {
+  function playSound(soundId, volume = 0.5, skipTime = 0.1) {
     if (muted) return;
     const audio = $(soundId);
     if (!audio || !audio.src) return;
@@ -490,6 +495,10 @@
       }
       
       const comboCount = getComboCount();
+      // 최고 콤보 업데이트
+      if (comboCount > maxComboReached) {
+        maxComboReached = comboCount;
+      }
       const mult = getComboMultiplier(comboCount);
       let itemScore = base;
       
@@ -960,6 +969,16 @@
           if (d.type !== ITEM.TAX && d.type !== ITEM.DEBT) {
             loseHeart();
             if (ComboSystem?.comboCount > 0) resetCombo();
+          } else if (d.type === ITEM.DEBT) {
+            // 빚 아이템이 화면 밖으로 떨어져 사라지면 피한 빚으로 계산
+            const currentLevel = levelIndex + 1;
+            let percentDeduction = 0;
+            if (currentLevel <= 2) percentDeduction = 0.01;       // 1%
+            else if (currentLevel <= 5) percentDeduction = 0.03;  // 3%
+            else if (currentLevel <= 8) percentDeduction = 0.05;  // 5%
+            else percentDeduction = 0.10;                        // 10%
+            const avoidedAmount = Math.floor(score * percentDeduction);
+            totalDebtAvoided += avoidedAmount;
           }
           currentDrops.splice(i, 1);
         }
@@ -1074,6 +1093,11 @@
     score = 0;
     hearts = 5;
     
+    // 통계 초기화
+    gameStartTime = performance.now();
+    maxComboReached = 0;
+    totalDebtAvoided = 0;
+    
     if (ComboSystem?.init) ComboSystem.init();
     if (ItemSystem?.init) {
       ItemSystem.init();
@@ -1121,6 +1145,56 @@
     updateHud();
   }
 
+  /**
+   * 시간 포맷팅 (초를 분:초 형식으로)
+   * @param {number} seconds - 초 단위 시간
+   * @returns {string} "X분 Y초" 형식의 문자열
+   */
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}분 ${secs}초`;
+  }
+  
+  /**
+   * 점수에 따른 등급 계산
+   * @param {number} score - 게임 점수
+   * @returns {string} 등급 (KING, S, A, B, C, D)
+   */
+  function getGrade(score) {
+    if (score >= 5000000) return "KING";
+    if (score >= 2000000) return "S";
+    if (score >= 1500000) return "A";
+    if (score >= 1000000) return "B";
+    if (score >= 500000) return "C";
+    return "D";
+  }
+  
+  /**
+   * 등급에 따른 엔딩 메시지 반환
+   * @param {number} score - 게임 점수
+   * @returns {string} 엔딩 메시지
+   */
+  function getEndingMessage(score) {
+    const grade = getGrade(score);
+    switch (grade) {
+      case "KING":
+        return "🍗 깐부치킨으로 가십시오! 🍗";
+      case "S":
+        return "🎉 축하합니다! 부의 자유 달성! 이제 당신은 파이어족입니다!";
+      case "A":
+        return "💎 훌륭해요! 경제적 여유가 생겼습니다. 조금만 더!";
+      case "B":
+        return "👍 잘했어요! 평범한 직장인의 삶, 나쁘지 않네요.";
+      case "C":
+        return "😅 그래도 월급은 있어요... 다음엔 더 잘할 수 있어요!";
+      case "D":
+        return "😭 이번 달도 마이너스... 소비 습관을 점검해보세요.";
+      default:
+        return "게임 오버";
+    }
+  }
+
   function endGame() {
     gameOver = true;
     paused = true;
@@ -1135,10 +1209,36 @@
       btnReport.hidden = false;
       popBanner("신기록! 🎉");
     }
+    
+    // 통계 계산
     const comboCount = getComboCount();
+    const finalMaxCombo = Math.max(maxComboReached, comboCount || 0);
+    const survivalTime = (performance.now() - gameStartTime) / 1000; // 초 단위
+    const endingMessage = getEndingMessage(score);
+    const grade = getGrade(score);
+    
+    // 통계 대시보드 텍스트 생성
+    const statsText = `📊 플레이 결과
+
+━━━━━━━━━━━━━━━━━━
+
+💰 획득 총액: ₩${score.toLocaleString('ko-KR')}
+
+🛡️ 피한 빚: ₩${totalDebtAvoided.toLocaleString('ko-KR')}
+
+🔥 최고 콤보: ${finalMaxCombo}
+
+⏱️ 생존 시간: ${formatTime(survivalTime)}
+
+📈 경제력 등급: ${grade}
+
+━━━━━━━━━━━━━━━━━━
+
+${endingMessage}`;
+    
     showOverlay(
-      "GAME OVER",
-      `점수 ${score} · 최고 콤보 ×${comboCount || 1} · 레벨 ${LV[levelIndex]?.id || levelIndex + 1}`,
+      `GAME OVER - ${grade}등급`,
+      statsText,
       "다시 시작"
     );
   }
