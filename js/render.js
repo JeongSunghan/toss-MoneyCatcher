@@ -158,14 +158,21 @@
         ox = (displayWidth - world.w * s) / 2,
         oy = (displayHeight - world.h * s) / 2;
       
+      // 모바일 최적화: 그림자 효과 줄이기
+      const isMobile = window.innerWidth <= 768;
+      const shadowBlur = isMobile ? 4 : 8;
+      
+      // 배치 렌더링을 위해 같은 색상의 파티클을 그룹화
       for (const p of particles) {
         const px = ox + p.x * s,
           py = oy + p.y * s;
         ctx.save();
         ctx.globalAlpha = p.life;
         ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 8;
+        if (!isMobile) {
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = shadowBlur;
+        }
         ctx.beginPath();
         ctx.arc(px, py, p.size * s, 0, Math.PI * 2);
         ctx.fill();

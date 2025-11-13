@@ -3,15 +3,33 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <title>머니 캐쳐</title>
+  <title>머니 캐쳐 - 떨어지는 돈을 잡아라! Money Catcher</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="2025년 토스 HTML5 게임. 떨어지는 돈을 받고 세금과 빚을 피하는 아케이드 스타일 게임. 콤보를 쌓아 높은 점수를 노려보세요!" />
+  <meta name="keywords" content="머니캐쳐, Money Catcher, 토스 게임, HTML5 게임, 아케이드 게임, 모바일 게임, 캐주얼 게임" />
+  <meta name="author" content="Money Catcher" />
   <meta name="theme-color" content="#5C94FC" />
+  
+  <!-- 모바일 웹앱 설정 -->
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="머니 캐쳐" />
   <meta name="format-detection" content="telephone=no" />
   <meta name="msapplication-TileColor" content="#5C94FC" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="머니 캐쳐 - 떨어지는 돈을 잡아라!" />
+  <meta property="og:description" content="떨어지는 돈을 받고 세금과 빚을 피하는 아케이드 스타일 게임" />
+  <meta property="og:site_name" content="머니 캐쳐" />
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="머니 캐쳐 - 떨어지는 돈을 잡아라!" />
+  <meta name="twitter:description" content="떨어지는 돈을 받고 세금과 빚을 피하는 아케이드 스타일 게임" />
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
   <!-- Neodgm 폰트 (네오둥근모) - 로컬 파일 사용 -->
   <style>
     @font-face {
@@ -27,41 +45,41 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="topbar">
+  <header class="topbar" role="banner">
     <div class="topbar-left">
-      <button id="btn-share" class="ghost sm">공유</button>
-      <button id="btn-report" class="ghost sm" hidden>토스 앱 열기</button>
+      <button id="btn-share" class="ghost sm" aria-label="게임 공유하기">공유</button>
+      <button id="btn-report" class="ghost sm" hidden aria-label="토스 앱 열기">토스 앱 열기</button>
     </div>
-    <div class="toggles">
-      <button id="btn-pause" title="일시정지" class="ghost sm">Ⅱ</button>
-      <button id="btn-mute" title="음소거" class="ghost sm">🔊</button>
+    <div class="toggles" role="toolbar" aria-label="게임 컨트롤">
+      <button id="btn-pause" title="일시정지" class="ghost sm" aria-label="게임 일시정지" aria-pressed="false">Ⅱ</button>
+      <button id="btn-mute" title="음소거" class="ghost sm" aria-label="음소거 토글" aria-pressed="false">🔊</button>
     </div>
   </header>
 
   <!-- 모바일 헤드바 (모바일에서만 표시) -->
-  <div id="mobile-header" class="mobile-header" hidden>
+  <div id="mobile-header" class="mobile-header" hidden role="status" aria-live="polite" aria-label="게임 상태 정보">
     <div class="mobile-header-row">
       <div class="mobile-stat">
         <span class="mobile-stat-label">돈</span>
-        <span id="mobile-score" class="mobile-stat-value">0</span>
+        <span id="mobile-score" class="mobile-stat-value" aria-label="현재 점수">0</span>
       </div>
       <div class="mobile-stat">
         <span class="mobile-stat-label">콤보</span>
-        <span id="mobile-combo" class="mobile-stat-value">×1</span>
+        <span id="mobile-combo" class="mobile-stat-value" aria-label="현재 콤보">×1</span>
       </div>
       <div class="mobile-stat">
         <span class="mobile-stat-label">레벨</span>
-        <span id="mobile-level" class="mobile-stat-value">LV 1</span>
+        <span id="mobile-level" class="mobile-stat-value" aria-label="현재 레벨">LV 1</span>
       </div>
     </div>
     <div class="mobile-header-row">
       <div class="mobile-stat">
         <span class="mobile-stat-label">최고</span>
-        <span id="mobile-hi" class="mobile-stat-value">0</span>
+        <span id="mobile-hi" class="mobile-stat-value" aria-label="최고 점수">0</span>
       </div>
       <div class="mobile-stat mobile-debuff">
         <span class="mobile-stat-label">디버프</span>
-        <span id="mobile-debuff-text" class="mobile-stat-value">대기 중</span>
+        <span id="mobile-debuff-text" class="mobile-stat-value" aria-label="현재 디버프 상태">대기 중</span>
       </div>
     </div>
   </div>
@@ -69,68 +87,70 @@
   <main class="stage">
     <div class="game-container">
       <div class="canvas-wrap">
-        <canvas id="game" width="360" height="520" aria-label="게임 화면" role="img"></canvas>
+        <canvas id="game" width="360" height="520" aria-label="머니 캐쳐 게임 화면. 떨어지는 돈을 받고 세금과 빚을 피하는 게임입니다." role="img" tabindex="0"></canvas>
 
         <!-- 콤보 바 (게임 내부) -->
-        <div class="combo-wrap">
+        <div class="combo-wrap" role="status" aria-live="polite" aria-label="콤보 상태">
           <div class="combo-label">COMBO</div>
-          <div class="combo-bar"><div id="combo-fill" class="combo-fill"></div></div>
-          <div id="combo-mult" class="combo-mult">×1</div>
+          <div class="combo-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="콤보 게이지">
+            <div id="combo-fill" class="combo-fill"></div>
+          </div>
+          <div id="combo-mult" class="combo-mult" aria-label="콤보 배수">×1</div>
         </div>
 
         <!-- 생명 표시 (게임 내부) -->
-        <div id="hearts-display" class="hearts-display">
+        <div id="hearts-display" class="hearts-display" role="status" aria-live="polite" aria-label="생명력">
           <span class="life-label">LIFE</span>
-          <span id="hearts-count" class="hearts-count">×5</span>
+          <span id="hearts-count" class="hearts-count" aria-label="남은 생명">×5</span>
         </div>
 
         <!-- 버프 표시 (게임 내부) -->
-        <div id="buffs-display" class="buffs-display"></div>
+        <div id="buffs-display" class="buffs-display" role="status" aria-live="polite" aria-label="활성 버프"></div>
 
         <!-- 배너 -->
-        <div id="banner" class="banner" hidden></div>
+        <div id="banner" class="banner" hidden role="alert" aria-live="assertive" aria-atomic="true"></div>
       </div>
 
       <!-- 사이드바: 점수 및 정보 표시 (테트리스 스타일) -->
-      <aside id="sidebar" class="sidebar">
+      <aside id="sidebar" class="sidebar" role="complementary" aria-label="게임 통계">
         <div class="sidebar-header">
           <h1>머니 캐쳐</h1>
         </div>
         <div class="sidebar-content">
           <div class="stat-card">
             <div class="stat-label">당신이 모은 돈</div>
-            <div id="score" class="stat-value">0</div>
+            <div id="score" class="stat-value" role="status" aria-live="polite" aria-label="현재 점수">0</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">콤보</div>
-            <div id="combo" class="stat-value combo-value">×1</div>
+            <div id="combo" class="stat-value combo-value" role="status" aria-live="polite" aria-label="현재 콤보">×1</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">레벨</div>
-            <div id="level" class="stat-value">LV 1</div>
+            <div id="level" class="stat-value" role="status" aria-live="polite" aria-label="현재 레벨">LV 1</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">최고 금액</div>
-            <div id="hi" class="stat-value">0</div>
+            <div id="hi" class="stat-value" role="status" aria-label="최고 점수">0</div>
           </div>
           <div class="stat-card" id="debuff-card">
             <div class="stat-label debuff-label">디버프</div>
-            <div id="debuff-text" class="stat-value debuff-value">대기 중</div>
-            <div id="debuff-desc" class="debuff-desc" hidden></div>
-            <div id="debuff-timer" class="debuff-timer" hidden></div>
-            <div id="debuff-next" class="debuff-next"></div>
+            <div id="debuff-text" class="stat-value debuff-value" role="status" aria-live="polite" aria-label="현재 디버프">대기 중</div>
+            <div id="debuff-desc" class="debuff-desc" hidden aria-label="디버프 설명"></div>
+            <div id="debuff-timer" class="debuff-timer" hidden aria-label="디버프 남은 시간"></div>
+            <div id="debuff-next" class="debuff-next" aria-label="다음 디버프 예상 시간"></div>
           </div>
         </div>
       </aside>
     </div>
 
     <!-- 프롤로그 오버레이 -->
-    <div id="prologue-overlay" class="overlay prologue-overlay">
+    <div id="prologue-overlay" class="overlay prologue-overlay" role="dialog" aria-labelledby="prologue-title" aria-modal="true">
       <div class="panel prologue-panel">
         <div class="prologue-content">
-          <div class="prologue-divider">━━━━━━━━━━━━━━━━━━━━━━</div>
-          <h2 class="prologue-title">💼 머니캐쳐 💼</h2>
-          <div class="prologue-divider">━━━━━━━━━━━━━━━━━━━━━━</div>
+          <div class="prologue-divider" aria-hidden="true">━━━━━━━━━━━━━━━━━━━━━━</div>
+          <h2 id="prologue-title" class="prologue-title">💼 머니캐쳐 💼</h2>
+          <div class="prologue-divider" aria-hidden="true">━━━━━━━━━━━━━━━━━━━━━━</div>
           <div class="prologue-text">
             <p>2025년, 당신은 경제적 자유를</p>
             <p>꿈꾸는 평범한 직장인입니다.</p>
@@ -141,38 +161,38 @@
             <p>과연 당신은 부의 자유에</p>
             <p>도달할 수 있을까요?</p>
           </div>
-          <div class="prologue-divider">━━━━━━━━━━━━━━━━━━━━━━</div>
+          <div class="prologue-divider" aria-hidden="true">━━━━━━━━━━━━━━━━━━━━━━</div>
         </div>
         <div class="row">
-          <button id="btn-start-prologue" class="primary">나는 부자가 될꺼야!</button>
+          <button id="btn-start-prologue" class="primary" aria-label="게임 시작하기">나는 부자가 될꺼야!</button>
         </div>
       </div>
     </div>
 
     <!-- 오버레이 -->
-    <div id="overlay" class="overlay" hidden>
+    <div id="overlay" class="overlay" hidden role="dialog" aria-labelledby="ov-title" aria-modal="true">
       <div class="panel">
         <h2 id="ov-title">머니 캐쳐</h2>
-        <div id="ov-sub">좌,우 스와이프 또는 방향키로 요원을 이동하세요.</div>
-        <div id="ov-stats" class="game-stats" hidden></div>
+        <div id="ov-sub" role="status" aria-live="polite">좌,우 스와이프 또는 방향키로 요원을 이동하세요.</div>
+        <div id="ov-stats" class="game-stats" hidden role="region" aria-label="게임 결과 통계"></div>
         <div class="row">
-          <button id="btn-start" class="primary">GAME START</button>
+          <button id="btn-start" class="primary" aria-label="게임 시작">GAME START</button>
         </div>
         <div class="row">
-          <button id="btn-tutorial" class="ghost">TUTORIAL</button>
+          <button id="btn-tutorial" class="ghost" aria-label="튜토리얼 보기">TUTORIAL</button>
         </div>
         <div class="row small"><span>같은 종류 연속 수집 시 콤보 유지</span></div>
       </div>
     </div>
 
     <!-- 튜토리얼 오버레이 -->
-    <div id="tutorial-overlay" class="overlay" hidden>
+    <div id="tutorial-overlay" class="overlay" hidden role="dialog" aria-labelledby="tutorial-title" aria-modal="true">
       <div class="panel tutorial-panel">
-        <h2>튜토리얼</h2>
+        <h2 id="tutorial-title">튜토리얼</h2>
         
         <!-- 페이지 인디케이터 -->
-        <div class="tutorial-pages">
-          <div class="tutorial-page active" data-page="0">
+        <div class="tutorial-pages" role="tabpanel" aria-label="튜토리얼 페이지">
+          <div class="tutorial-page active" data-page="0" role="tabpanel" aria-labelledby="tutorial-title">
             <div class="tutorial-content">
               <p><strong>게임 방법:</strong></p>
               <ul>
@@ -196,23 +216,23 @@
           
           <!-- 디버프 페이지들은 JavaScript에서 동적으로 생성됩니다 -->
           
-          <div class="tutorial-page" data-page="buff">
+          <div class="tutorial-page" data-page="buff" role="tabpanel" aria-labelledby="tutorial-title">
             <div class="tutorial-content">
               <p><strong>버프 항목:</strong></p>
-              <div id="tutorial-buffs" class="tutorial-list"></div>
+              <div id="tutorial-buffs" class="tutorial-list" role="list" aria-label="버프 항목 목록"></div>
             </div>
           </div>
         </div>
         
         <!-- 페이지네이션 컨트롤 -->
-        <div class="tutorial-controls">
+        <div class="tutorial-controls" role="toolbar" aria-label="튜토리얼 네비게이션">
           <div class="tutorial-nav">
-            <button id="btn-tutorial-prev" class="ghost sm">이전</button>
-            <span id="tutorial-page-indicator" class="tutorial-page-indicator">1 / 1</span>
-            <button id="btn-tutorial-next" class="ghost sm">다음</button>
+            <button id="btn-tutorial-prev" class="ghost sm" aria-label="이전 페이지">이전</button>
+            <span id="tutorial-page-indicator" class="tutorial-page-indicator" aria-live="polite" aria-atomic="true">1 / 1</span>
+            <button id="btn-tutorial-next" class="ghost sm" aria-label="다음 페이지">다음</button>
           </div>
           <div class="row">
-            <button id="btn-close-tutorial" class="primary">닫기</button>
+            <button id="btn-close-tutorial" class="primary" aria-label="튜토리얼 닫기">닫기</button>
           </div>
         </div>
       </div>
@@ -220,25 +240,25 @@
   </main>
 
   <!-- 선택 오디오 -->
-  <audio id="sfx-catch"  src="assets/sound/item_get.mp3" preload="auto"></audio>
-  <audio id="sfx-penalty" src="assets/sound/minus_item.mp3" preload="auto"></audio>
-  <audio id="sfx-combo"   src="assets/sound/combo_up.mp3" preload="auto"></audio>
-  <audio id="sfx-clear"   src="assets/sound/level_up.mp3" preload="auto"></audio>
-  <audio id="bgm"         src="assets/sound/background.mp3"    preload="auto" loop></audio>
+  <audio id="sfx-catch"  src="assets/sound/item_get.mp3" preload="auto" aria-label="아이템 획득 효과음"></audio>
+  <audio id="sfx-penalty" src="assets/sound/minus_item.mp3" preload="auto" aria-label="패널티 효과음"></audio>
+  <audio id="sfx-combo"   src="assets/sound/combo_up.mp3" preload="auto" aria-label="콤보 증가 효과음"></audio>
+  <audio id="sfx-clear"   src="assets/sound/level_up.mp3" preload="auto" aria-label="레벨업 효과음"></audio>
+  <audio id="bgm"         src="assets/sound/background.mp3" preload="auto" loop aria-label="배경 음악"></audio>
   <!-- <audio id="fever_bgm"         src=""    preload="auto" loop></audio> -->
 
-  <!-- 모듈 스크립트  -->
-  <script src="js/config.js"></script>
-  <script src="js/debuffs.js"></script>
-  <script src="js/buffs.js"></script>
-  <script src="js/items.js"></script>
-  <script src="js/combo.js"></script>
-  <script src="js/agent.js"></script>
-  <script src="js/input.js"></script>
-  <script src="js/render.js"></script>
-  <script src="js/ui.js"></script>
+  <!-- 모듈 스크립트 (의존성 순서대로 로드) -->
+  <script src="js/config.js" defer></script>
+  <script src="js/debuffs.js" defer></script>
+  <script src="js/buffs.js" defer></script>
+  <script src="js/items.js" defer></script>
+  <script src="js/combo.js" defer></script>
+  <script src="js/agent.js" defer></script>
+  <script src="js/input.js" defer></script>
+  <script src="js/render.js" defer></script>
+  <script src="js/ui.js" defer></script>
 
   <!-- 메인 게임 스크립트 -->
-  <script src="game.js"></script>
+  <script src="game.js" defer></script>
 </body>
 </html>

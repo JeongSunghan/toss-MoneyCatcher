@@ -159,8 +159,16 @@
   for (const k in toLoad) {
     const im = new Image();
     im.onerror = () => {
-      console.warn(`[Asset] Failed to load: ${toLoad[k]}`);
+      // agent 이미지는 fallback 렌더링이 있으므로 경고만 출력 (에러 아님)
+      if (k === 'agent_idle' || k === 'agent_run') {
+        console.log(`[Asset] Agent sprite not found: ${toLoad[k]} (using fallback rendering)`);
+      } else {
+        console.warn(`[Asset] Failed to load: ${toLoad[k]}`);
+      }
       assetsLoaded++;
+      if (assetsLoaded === totalAssets) {
+        console.log(`[Asset] All ${totalAssets} assets loaded (some with fallback)`);
+      }
     };
     im.onload = () => {
       assetsLoaded++;
@@ -976,12 +984,16 @@
   // 메인 게임 루프
   // ============================================
   let prev = 0;
+  let lastRenderTime = 0; // 마지막 렌더링 시간 (모바일 최적화)
   function loop(ts) {
-    // 모바일에서 60fps 보장 (16.67ms = 60fps)
-    const targetFPS = isMobile() ? 16.67 : 16;
+    // 모바일에서 30fps로 조정 (33.33ms = 30fps), 데스크톱은 60fps (16ms)
+    const targetFPS = isMobile() ? 33.33 : 16;
     const dt = prev ? Math.min(ts - prev, 100) : targetFPS;
     prev = ts;
     const now = performance.now();
+    
+    // 모바일에서 렌더링 스킵 (물리 업데이트는 계속)
+    const shouldRender = !isMobile() || (ts - lastRenderTime >= 33.33);
 
     const shouldShake = world.shakeT > now;
     if (shouldShake) {
@@ -1203,8 +1215,10 @@
       ItemSystem.updateParticles(dt, world);
     }
 
-    // 렌더링
-    if (RenderSystem?.render) {
+    // 렌더링 (모바일에서 프레임 스킵)
+    if (shouldRender) {
+      lastRenderTime = ts;
+      if (RenderSystem?.render) {
       RenderSystem.render(ctx, cvs, world, {
         IMG,
         COLOR,
@@ -1220,8 +1234,8 @@
         DEBUFFS,
         BUFFS,
       });
-    } else {
-      // Fallback 렌더링
+      } else {
+        // Fallback 렌더링
       ctx.clearRect(0, 0, cvs.width, cvs.height);
       const canvasWidth = cvs.width || 360;
       const canvasHeight = cvs.height || 520;
@@ -1273,6 +1287,7 @@
         ctx.fillStyle = "rgba(139, 111, 71, 0.7)";
         ctx.fillRect(0, canvasHeight - overlayHeight, canvasWidth, overlayHeight);
       }
+      } // shouldRender 조건 종료
     }
     
     updateHud();
@@ -1527,23 +1542,79 @@
     InputSystem.setupEventListeners(cvs, world);
   }
 
+  // 키보드 접근성: ESC 키로 오버레이 닫기, Enter/Space로 버튼 활성화
   window.addEventListener("keydown", (e) => {
-    if (gameOver) return;
-    if (paused && e.key === " ") {
-      paused = false;
-      playBGM(true); // 재개 시 BGM 재생
-      hideOverlay();
-      return;
+    // ESC 키: 오버레이 닫기
+    if (e.key === "Escape") {
+      if (!tutorialOverlay.hidden) {
+        // 튜토리얼 닫기
+        if (btnCloseTutorial) btnCloseTutorial.click();
+        e.preventDefault();
+        return;
+      }
+      if (!overlay.hidden && !gameOver) {
+        // 일시정지 오버레이 닫기
+        if (paused) {
+          paused = false;
+          playBGM(true);
+          hideOverlay();
+        }
+        e.preventDefault();
+        return;
+      }
     }
-    if (e.key === " ") {
+    
+    // Enter/Space: 포커스된 버튼 활성화
+    if ((e.key === "Enter" || e.key === " ") && document.activeElement?.tagName === "BUTTON") {
+      // Space 키는 기본 스크롤 동작 방지 (버튼 클릭 시에만)
+      if (e.key === " " && document.activeElement.tagName === "BUTTON") {
+        e.preventDefault();
+      }
+      return; // 기본 버튼 클릭 동작 허용
+    }
+    
+    // 게임 플레이 중 키보드 조작 (방향키)
+    if (!gameOver && !paused && tutorialOverlay.hidden && overlay.hidden) {
+      // 방향키로 캐릭터 이동 (키보드 접근성)
+      const agent = getAgent();
+      if (agent) {
+        const moveSpeed = 5;
+        if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+          const targetX = Math.max(agent.w / 2, agent.x - moveSpeed * 10);
+          if (InputSystem) InputSystem.mouseTargetX = targetX;
+          e.preventDefault();
+        } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+          const targetX = Math.min(world.w - agent.w / 2, agent.x + moveSpeed * 10);
+          if (InputSystem) InputSystem.mouseTargetX = targetX;
+          e.preventDefault();
+        }
+      }
+    }
+    
+    // Space 키: 게임 일시정지/재개
+    if (e.key === " " && !gameOver && tutorialOverlay.hidden && overlay.hidden) {
       paused = !paused;
       if (paused) {
-        playBGM(false); // 일시정지 시 BGM 정지
+        playBGM(false);
         showOverlay("PAUSED", "계속하려면 CONTINUE 버튼을 누르세요", "CONTINUE");
+        // 포커스를 CONTINUE 버튼으로 이동
+        setTimeout(() => {
+          if (btnStart) btnStart.focus();
+        }, 100);
       } else {
-        playBGM(true); // 재개 시 BGM 재생
+        playBGM(true);
         hideOverlay();
       }
+      e.preventDefault();
+    }
+  });
+  
+  // 키보드 접근성: 키를 놓았을 때 이동 중지
+  window.addEventListener("keyup", (e) => {
+    if (!gameOver && !paused && (e.key === "ArrowLeft" || e.key === "ArrowRight" || 
+        e.key === "a" || e.key === "A" || e.key === "d" || e.key === "D")) {
+      // 키를 놓으면 이동 중지 (선택적)
+      // 실제로는 마우스/터치 입력이 우선이므로 주석 처리
     }
   });
 

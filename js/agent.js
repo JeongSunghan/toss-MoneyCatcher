@@ -281,10 +281,14 @@
       const dh = fh * s * scale;
 
       ctx.save();
-      ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
-      ctx.shadowBlur = 4;
-      ctx.shadowOffsetX = 2;
-      ctx.shadowOffsetY = 2;
+      // 모바일 최적화: 그림자 효과 줄이기
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile) {
+        ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+      }
       
       // 이미지가 로드되었으면 스프라이트 시트 사용
       if (sheet && sheet.complete && sheet.naturalWidth > 0) {

@@ -253,6 +253,15 @@
      * @param {Object} world - 게임 월드 정보
      */
     updateParticles(dt, world) {
+      // 모바일 최적화: 파티클 수 제한
+      const isMobile = window.innerWidth <= 768;
+      const maxParticles = isMobile ? 50 : 200;
+      
+      // 파티클이 너무 많으면 오래된 것부터 제거
+      if (this.particles.length > maxParticles) {
+        this.particles = this.particles.slice(-maxParticles);
+      }
+      
       for (let i = this.particles.length - 1; i >= 0; i--) {
         const p = this.particles[i];
         p.x += p.vx * dt;
