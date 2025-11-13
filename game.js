@@ -185,6 +185,7 @@
   // 디버프 상태 (fallback)
   let activeDebuffs = [];
   let debuffNextTime = 0;
+  let feverPausedDebuffNextTime = 0; // FEVER 타임 중 디버프 대기 타이머 일시정지용
   let meetingCallNextStop = 0;
   let meetingCallStopped = false;
   let subscriptionBombNextCharge = 0;
@@ -376,7 +377,7 @@
     if (bgm) {
       try {
         if (play && !muted) {
-          bgm.volume = 0.3; // BGM 볼륨 감소 (0.5에서 0.3으로)
+          bgm.volume = 0.1; // BGM 볼륨 감소 
           updateBGMTempo(); // 레벨에 맞는 템포 적용
           bgm.play().catch(err => {
             if (err.name !== 'NotAllowedError') {
@@ -465,13 +466,22 @@
       score = Math.max(0, score - itemScore); // 점수는 0 이하로 내려가지 않음
       vibrate(40);
       shake(8, 200);
-      playSound("sfx-penalty", 0.9); // TAX/DEBT 수집 사운드 (볼륨 증가: 0.6 → 0.9)
+      playSound("sfx-penalty", 1.0); // TAX/DEBT 수집 사운드 (볼륨 최대)
     } else {
       // + 아이템 수집
       if (ComboSystem?.incrementCombo) {
         const feverTriggered = ComboSystem.incrementCombo(DebuffSystem);
         if (feverTriggered) {
-          setActiveDebuffs([]);
+          // FEVER 타임 시작: 모든 디버프 해제 및 디버프 대기 타이머 일시정지
+          const currentNextTime = getDebuffNextTime();
+          if (currentNextTime > 0) {
+            const remainingTime = currentNextTime - performance.now();
+            if (remainingTime > 0) {
+              feverPausedDebuffNextTime = remainingTime; // 남은 시간 저장
+            }
+          }
+          setActiveDebuffs([]); // 모든 디버프 해제
+          setDebuffNextTime(0); // 디버프 대기 타이머 정지
           popBanner(`FEVER TIME!🔥\n(${ComboSystem.comboCount} 콤보)`);
           playSound("sfx-combo", 0.8); // FEVER 타임 발동 사운드 (25, 50, 75, 100 콤보)
         }
@@ -499,7 +509,7 @@
       }
       
       score += itemScore;
-      playSound("sfx-catch", 0.9); // + 아이템 수집 사운드 (볼륨 증가: 0.7 → 0.9)
+      playSound("sfx-catch", 1.0); // + 아이템 수집 사운드 (볼륨 최대)
       checkLevelUp();
     }
   }
@@ -549,7 +559,7 @@
         updateBGMTempo(); // 템포 구간이 변경되었을 때만 업데이트
       }
       
-      if (levelIndex >= 1) {
+      if (levelIndex >= 1 && !isFeverTime()) {
         const maxStack = getMaxDebuffStack(levelIndex + 1);
         const currentDebuffs = getActiveDebuffs();
         if (currentDebuffs.length < maxStack) {
@@ -561,13 +571,15 @@
         }
       }
       
-      if (levelIndex >= 1) {
+      if (levelIndex >= 1 && !isFeverTime()) {
         setDebuffNextTime(performance.now() + getDebuffInterval(levelIndex + 1));
       }
     }
   }
   
   function activateRandomDebuff() {
+    // FEVER 타임 중에는 디버프 생성 안 함
+    if (isFeverTime()) return;
     const debuffTypes = Object.values(DEBUFFS);
     const currentDebuffs = getActiveDebuffs();
     const availableDebuffs = debuffTypes.filter(type => 
@@ -590,7 +602,11 @@
     setActiveDebuffs(debuffs);
     
     updateDebuffUI();
-    popBanner(`${debuffInfo.name} 발생!\n${debuffInfo.desc}`, 4000, 1);
+    
+    // FEVER 타임 중에는 디버프 팝업 표시 안 함
+    if (!isFeverTime()) {
+      popBanner(`${debuffInfo.name} 발생!\n${debuffInfo.desc}`, 4000, 1);
+    }
   }
   
   function updateDebuff() {
@@ -842,9 +858,14 @@
       if (ComboSystem?.updateCombo) ComboSystem.updateCombo(deltaTime, DebuffSystem);
       if (ComboSystem?.updateFeverTime) {
         const feverEnded = ComboSystem.updateFeverTime(deltaTime);
-        // FEVER 타임이 끝나면 모든 디버프 해제
+        // FEVER 타임이 끝나면 디버프 대기 타이머 원상 복구
         if (feverEnded) {
-          setActiveDebuffs([]);
+          setActiveDebuffs([]); // 모든 디버프 해제
+          // FEVER 타임 전에 저장된 디버프 대기 타이머 시간 복구
+          if (feverPausedDebuffNextTime > 0) {
+            setDebuffNextTime(performance.now() + feverPausedDebuffNextTime);
+            feverPausedDebuffNextTime = 0; // 초기화
+          }
           popBanner("FEVER 타임 종료!");
         }
       }
