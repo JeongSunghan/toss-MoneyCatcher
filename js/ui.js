@@ -111,9 +111,22 @@
         getActiveDebuffs,
         getDebuffNextTime,
         getDebuffInterval,
+        isFeverTime,
       } = state;
 
       if (!elDebuffText) return;
+
+      // FEVER 타임 중에는 "FEVER 적용중" 표시
+      if (isFeverTime && typeof isFeverTime === 'function' && isFeverTime()) {
+        elDebuffText.textContent = "FEVER 적용중";
+        if (elDebuffDesc) {
+          elDebuffDesc.textContent = "모든 디버프가 일시 중지됩니다";
+          elDebuffDesc.hidden = false;
+        }
+        if (elDebuffTimer) elDebuffTimer.hidden = true;
+        if (elDebuffNext) elDebuffNext.hidden = true;
+        return;
+      }
 
       const currentDebuffs = getActiveDebuffs ? getActiveDebuffs() : [];
       

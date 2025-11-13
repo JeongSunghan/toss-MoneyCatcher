@@ -472,7 +472,7 @@
         const feverTriggered = ComboSystem.incrementCombo(DebuffSystem);
         if (feverTriggered) {
           setActiveDebuffs([]);
-          popBanner(`FEVER TIME! 🔥 (${ComboSystem.comboCount} 콤보)`);
+          popBanner(`FEVER TIME!🔥\n(${ComboSystem.comboCount} 콤보)`);
           playSound("sfx-combo", 0.8); // FEVER 타임 발동 사운드 (25, 50, 75, 100 콤보)
         }
       }
@@ -655,8 +655,19 @@
         getActiveDebuffs,
         getDebuffNextTime,
         getDebuffInterval,
+        isFeverTime,
       });
     } else {
+      // FEVER 타임 중에는 "FEVER 적용중" 표시
+      if (isFeverTime()) {
+        elDebuffText.textContent = "FEVER 적용중";
+        elDebuffDesc.textContent = "모든 디버프가 일시 중지됩니다";
+        elDebuffDesc.hidden = false;
+        elDebuffTimer.hidden = true;
+        elDebuffNext.hidden = true;
+        return;
+      }
+      
       const currentDebuffs = getActiveDebuffs();
       if (currentDebuffs.length > 0) {
         const firstDebuff = currentDebuffs[0];
@@ -831,7 +842,11 @@
       if (ComboSystem?.updateCombo) ComboSystem.updateCombo(deltaTime, DebuffSystem);
       if (ComboSystem?.updateFeverTime) {
         const feverEnded = ComboSystem.updateFeverTime(deltaTime);
-        if (feverEnded) popBanner("FEVER 타임 종료");
+        // FEVER 타임이 끝나면 모든 디버프 해제
+        if (feverEnded) {
+          setActiveDebuffs([]);
+          popBanner("FEVER 타임 종료!");
+        }
       }
       
       // 디버프 업데이트
