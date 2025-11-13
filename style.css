@@ -740,20 +740,75 @@ button[hidden] {
   }
 }
 
+/* 모바일 헤드바 스타일 */
+.mobile-header {
+  display: none; /* 기본적으로 숨김, 모바일에서만 표시 */
+  background: linear-gradient(180deg, #8B6F47, #6B5438);
+  border-bottom: clamp(2px, 0.8vw, 3px) solid #5C4632;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border-style: ridge;
+  padding: clamp(6px, 1.5vw, 8px) clamp(8px, 2vw, 12px);
+  gap: clamp(4px, 1vw, 6px);
+}
+
+.mobile-header-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: clamp(8px, 2vw, 12px);
+  width: 100%;
+}
+
+.mobile-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(2px, 0.5vw, 4px);
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-stat-label {
+  font-size: clamp(9px, 2.2vw, 11px);
+  color: #FFE66D;
+  text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.mobile-stat-value {
+  font-size: clamp(11px, 2.8vw, 14px);
+  color: #FFFFFF;
+  text-shadow: 1px 1px 0px #000000;
+  font-weight: bold;
+  font-family: "NeoDunggeunmo", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.mobile-debuff .mobile-stat-value {
+  font-size: clamp(9px, 2.2vw, 11px);
+  max-width: 80px;
+}
+
 /* 모바일 최적화 */
 @media (max-width: 768px) {
+  /* 모바일 헤드바 표시 */
+  .mobile-header {
+    display: flex;
+    flex-direction: column;
+  }
+  
   .game-container {
     flex-direction: column;
     align-items: center;
   }
   
+  /* 모바일에서 사이드바 숨기기 */
   .sidebar {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: auto !important;
-    height: auto !important;
-    max-height: none !important;
-    min-height: auto !important;
+    display: none !important;
   }
   
   .canvas-wrap {

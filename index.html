@@ -38,6 +38,34 @@
     </div>
   </header>
 
+  <!-- 모바일 헤드바 (모바일에서만 표시) -->
+  <div id="mobile-header" class="mobile-header" hidden>
+    <div class="mobile-header-row">
+      <div class="mobile-stat">
+        <span class="mobile-stat-label">돈</span>
+        <span id="mobile-score" class="mobile-stat-value">0</span>
+      </div>
+      <div class="mobile-stat">
+        <span class="mobile-stat-label">콤보</span>
+        <span id="mobile-combo" class="mobile-stat-value">×1</span>
+      </div>
+      <div class="mobile-stat">
+        <span class="mobile-stat-label">레벨</span>
+        <span id="mobile-level" class="mobile-stat-value">LV 1</span>
+      </div>
+    </div>
+    <div class="mobile-header-row">
+      <div class="mobile-stat">
+        <span class="mobile-stat-label">최고</span>
+        <span id="mobile-hi" class="mobile-stat-value">0</span>
+      </div>
+      <div class="mobile-stat mobile-debuff">
+        <span class="mobile-stat-label">디버프</span>
+        <span id="mobile-debuff-text" class="mobile-stat-value">대기 중</span>
+      </div>
+    </div>
+  </div>
+
   <main class="stage">
     <div class="game-container">
       <div class="canvas-wrap">

@@ -51,11 +51,13 @@
   window.addEventListener("resize", () => {
     resize();
     setTimeout(syncSidebarHeight, 50);
+    updateMobileHeaderVisibility(); // 모바일 헤드바 표시/숨김 업데이트
   }, { passive: true });
   window.addEventListener("orientationchange", () => {
     setTimeout(() => {
       resize();
       syncSidebarHeight();
+      updateMobileHeaderVisibility(); // 모바일 헤드바 표시/숨김 업데이트
     }, 100);
   }, { passive: true });
   if (document.readyState === "loading") {
@@ -71,7 +73,7 @@
       syncSidebarHeight();
     }, 100);
   }
-
+  
   // ============================================
   // DOM 요소 참조
   // ============================================
@@ -84,7 +86,30 @@
     elDebuffText = $("debuff-text"),
     elDebuffDesc = $("debuff-desc"),
     elDebuffTimer = $("debuff-timer"),
-    elDebuffNext = $("debuff-next");
+    elDebuffNext = $("debuff-next"),
+    buffsDisplay = $("buffs-display");
+  // 모바일 헤드바 요소
+  const mobileHeader = $("mobile-header"),
+    mobileScore = $("mobile-score"),
+    mobileCombo = $("mobile-combo"),
+    mobileLevel = $("mobile-level"),
+    mobileHi = $("mobile-hi"),
+    mobileDebuffText = $("mobile-debuff-text");
+  
+  // 모바일 감지 함수
+  function isMobile() {
+    return window.innerWidth <= 768;
+  }
+  
+  // 모바일 헤드바 표시/숨김
+  function updateMobileHeaderVisibility() {
+    if (mobileHeader) {
+      mobileHeader.hidden = !isMobile();
+    }
+  }
+  
+  // 초기 모바일 헤드바 표시/숨김 설정
+  updateMobileHeaderVisibility();
   const prologueOverlay = $("prologue-overlay"),
     overlay = $("overlay"),
     tutorialOverlay = $("tutorial-overlay"),
@@ -752,6 +777,11 @@
         elDebuffDesc.hidden = false;
         elDebuffTimer.hidden = true;
         elDebuffNext.hidden = true;
+        
+        // 모바일 헤드바 디버프 업데이트
+        if (isMobile() && mobileDebuffText) {
+          mobileDebuffText.textContent = "FEVER";
+        }
         return;
       }
       
@@ -764,19 +794,30 @@
         const remainingSeconds = Math.ceil(remaining / 1000);
         
         if (debuffInfo) {
-          elDebuffText.textContent = currentDebuffs.length > 1 
+          const debuffText = currentDebuffs.length > 1 
             ? `${debuffInfo.name} 외 ${currentDebuffs.length - 1}개`
             : debuffInfo.name;
+          elDebuffText.textContent = debuffText;
           elDebuffDesc.textContent = debuffInfo.desc;
           elDebuffDesc.hidden = false;
           elDebuffTimer.textContent = `남은 시간: ${remainingSeconds}초`;
           elDebuffTimer.hidden = false;
           elDebuffNext.hidden = true;
+          
+          // 모바일 헤드바 디버프 업데이트
+          if (isMobile() && mobileDebuffText) {
+            mobileDebuffText.textContent = debuffText;
+          }
         }
       } else {
         elDebuffText.textContent = "대기 중";
         elDebuffDesc.hidden = true;
         elDebuffTimer.hidden = true;
+        
+        // 모바일 헤드바 디버프 업데이트
+        if (isMobile() && mobileDebuffText) {
+          mobileDebuffText.textContent = "대기 중";
+        }
         
         if (levelIndex >= 1) {
           const interval = getDebuffInterval(levelIndex + 1);
@@ -827,12 +868,20 @@
       elScore.textContent = `₩${score.toLocaleString('ko-KR')}`;
       elCombo.textContent = `×${getComboCount() || 1}`;
       elLevel.textContent = `LV ${LV[levelIndex]?.id || levelIndex + 1}`;
-      elHi.textContent = `₩${highScore.toLocaleString('ko-KR')}`;
-      updateHearts();
-    updateComboUI();
-      updateDebuff();
-      updateBuffsUI();
     }
+    
+    // 모바일 헤드바 업데이트
+    if (isMobile() && mobileHeader && !mobileHeader.hidden) {
+      if (mobileScore) mobileScore.textContent = `₩${score.toLocaleString('ko-KR')}`;
+      if (mobileCombo) mobileCombo.textContent = `×${getComboCount() || 1}`;
+      if (mobileLevel) mobileLevel.textContent = `LV ${LV[levelIndex]?.id || levelIndex + 1}`;
+      if (mobileHi) mobileHi.textContent = `₩${highScore.toLocaleString('ko-KR')}`;
+    }
+    elHi.textContent = `₩${highScore.toLocaleString('ko-KR')}`;
+    updateHearts();
+    updateComboUI();
+    updateDebuff();
+    updateBuffsUI();
   }
   
   function updateBuffsUI() {
@@ -928,7 +977,9 @@
   // ============================================
   let prev = 0;
   function loop(ts) {
-    const dt = prev ? Math.min(ts - prev, 100) : 16;
+    // 모바일에서 60fps 보장 (16.67ms = 60fps)
+    const targetFPS = isMobile() ? 16.67 : 16;
+    const dt = prev ? Math.min(ts - prev, 100) : targetFPS;
     prev = ts;
     const now = performance.now();
 
