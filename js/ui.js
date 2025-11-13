@@ -36,8 +36,10 @@
         updateDebuff,
       } = state;
 
-      // 점수 업데이트
-      if (elScore) elScore.textContent = score;
+      // 점수 업데이트 (금액 형식으로 표시: ₩1,000,000)
+      if (elScore) {
+        elScore.textContent = `₩${score.toLocaleString('ko-KR')}`;
+      }
       
       // 콤보 업데이트
       if (elCombo) {
@@ -50,8 +52,10 @@
         elLevel.textContent = `LV ${LV[levelIndex].id}`;
       }
       
-      // 최고 점수 업데이트
-      if (elHi) elHi.textContent = highScore;
+      // 최고 점수 업데이트 (금액 형식으로 표시: ₩1,000,000)
+      if (elHi) {
+        elHi.textContent = `₩${highScore.toLocaleString('ko-KR')}`;
+      }
       
       // 하트 업데이트
       this.updateHearts(state);

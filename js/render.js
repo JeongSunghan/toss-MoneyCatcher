@@ -41,8 +41,9 @@
     /**
      * 이미지 또는 원형 fallback 렌더링
      * 이미지가 로드되지 않았을 때 원형과 라벨로 대체합니다.
+     * 동전과 지폐에 맞는 비율과 효과를 적용합니다.
      */
-    drawImageOrCircle(ctx, cvs, world, img, x, y, r, fallbackColor, label) {
+    drawImageOrCircle(ctx, cvs, world, img, x, y, r, fallbackColor, label, type) {
       const rect = cvs.getBoundingClientRect();
       const displayWidth = rect.width;
       const displayHeight = rect.height;
@@ -51,18 +52,77 @@
         oy = (displayHeight - world.h * s) / 2;
       const cx = ox + x * s,
         cy = oy + y * s;
+      
       if (img && img.complete && img.naturalWidth > 0) {
-        const sz = r * 2 * s * 1.2;
-        ctx.drawImage(img, cx - sz / 2, cy - sz / 2, sz, sz);
+        // 동전인지 지폐인지 판단 (정확한 매칭)
+        const isCoin = type && (type === "cash10" || type === "cash50" || 
+                                 type === "cash100" || type === "cash500");
+        const isBill = type && (type === "cash1000" || type === "cash5000" || 
+                                type === "cash10000" || type === "cash50000");
+        
+        if (isCoin) {
+          // 동전: 원형 비율 유지, 그림자 효과 (크기 조금 줄임)
+          ctx.save();
+          const coinSize = r * 2 * s * 1.1; // 1.3에서 1.1로 줄임
+          const coinRadius = coinSize / 2;
+          
+          // 그림자 먼저 그리기 (클리핑 전)
+          ctx.beginPath();
+          ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+          ctx.arc(cx + 3, cy + 3, coinRadius * 0.95, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // 동전은 원형으로 클리핑
+          ctx.beginPath();
+          ctx.arc(cx, cy, coinRadius, 0, Math.PI * 2);
+          ctx.clip();
+          
+          // 이미지 그리기 (정사각형으로 그려서 원형 클리핑 적용)
+          ctx.drawImage(img, cx - coinSize / 2, cy - coinSize / 2, coinSize, coinSize);
+          ctx.restore();
+        } else if (isBill) {
+          // 지폐: 직사각형 비율 유지, 크기 축소
+          // 지폐 비율: 너비를 더 넓게, 높이는 적당히 (실제 지폐 비율에 가깝게)
+          ctx.save();
+          const billWidth = r * 2 * s * 1.6;  // 너비 축소 (2.4 → 1.6)
+          const billHeight = r * 2 * s * 1.0; // 높이 축소 (1.4 → 1.0)
+          
+          // 그림자 먼저 그리기
+          ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+          ctx.fillRect(cx - billWidth / 2 + 3, cy - billHeight / 2 + 3, billWidth, billHeight);
+          
+          // 지폐 이미지 그리기 (직사각형으로, 클리핑 없음)
+          ctx.drawImage(img, cx - billWidth / 2, cy - billHeight / 2, billWidth, billHeight);
+          ctx.restore();
+        } else {
+          // 기타 아이템: 기본 원형 (그림자 효과 포함)
+          ctx.save();
+          const sz = r * 2 * s * 1.2;
+          
+          // 그림자
+          ctx.beginPath();
+          ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+          ctx.arc(cx + 2, cy + 2, sz / 2 * 0.95, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // 이미지 그리기
+          ctx.drawImage(img, cx - sz / 2, cy - sz / 2, sz, sz);
+          ctx.restore();
+        }
       } else {
+        // Fallback: 원형과 라벨
         ctx.beginPath();
         ctx.fillStyle = fallbackColor;
+        ctx.shadowColor = "rgba(0, 0, 0, 0.3)";
+        ctx.shadowBlur = 4;
         ctx.arc(cx, cy, r * s, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = "#fff";
-        ctx.font = `${Math.floor(r * s * 0.9)}px "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif, monospace`;
+        ctx.font = `bold ${Math.floor(r * s * 0.8)}px "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+        ctx.shadowBlur = 2;
         ctx.fillText(label, cx, cy);
       }
     },
@@ -81,7 +141,8 @@
         d.y,
         d.r,
         COLOR[d.type] || "#999",
-        LABEL[d.type] || "?"
+        LABEL[d.type] || "?",
+        d.type // 타입 전달 (동전/지폐 구분용)
       );
     },
 
@@ -207,17 +268,14 @@
         this.applyFeverTimeEffect(ctx);
       }
 
-      // 번아웃: 화면 흑백 효과 (FEVER 타임 중에는 무시)
-      if (hasDebuff && hasDebuff(DEBUFFS.BURNOUT) && !isFeverTime) {
-        this.applyBurnoutEffect(ctx);
-      }
+      // 연봉동결 디버프는 collect 함수에서 처리 (모든 금액을 10000원으로 변경)
 
       // 아이템 렌더링
       for (const d of drops) {
         if (d && d.alive) {
           // FOMO 증후군: - 아이템이 +로 위장
           if (hasDebuff && hasDebuff(DEBUFFS.FOMO_SYNDROME) && (d.type === ITEM.TAX || d.type === ITEM.DEBT)) {
-            const fakeType = ITEM.MONEY;
+            const fakeType = ITEM.CASH1000; // FOMO 증후군: 세금/빚을 1000원으로 위장
             this.drawImageOrCircle(
               ctx,
               cvs,
@@ -227,7 +285,8 @@
               d.y,
               d.r,
               COLOR[fakeType] || "#999",
-              LABEL[fakeType] || "?"
+              LABEL[fakeType] || "?",
+              fakeType // 타입 전달
             );
           } else {
             this.drawDrop(ctx, cvs, world, d, IMG, COLOR, LABEL);

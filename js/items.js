@@ -37,13 +37,17 @@
      * @param {Object} world - 게임 월드 정보
      * @param {Object} config - 게임 설정
      * @param {Object} debuffSystem - 디버프 시스템
+     * @param {number} currentLevel - 현재 레벨 (1-based)
      */
-    spawnOne(world, config, debuffSystem) {
+    spawnOne(world, config, debuffSystem, currentLevel = 1) {
       const ITEM = window.Game?.ITEM || {};
-      const WEIGHTS = window.Game?.config?.WEIGHTS || [];
+      const getWeightsByLevel = window.Game?.config?.getWeightsByLevel;
+      
+      // 레벨별 가중치 가져오기
+      let weights = getWeightsByLevel ? getWeightsByLevel(currentLevel) : [];
       
       // 디버프 적용
-      let weights = [...WEIGHTS];
+      weights = [...weights];
       
       // 세금 폭탄: 세금/빚 출현 빈도 증가
       if (debuffSystem && debuffSystem.hasDebuff && debuffSystem.hasDebuff(window.Game?.DEBUFFS?.TAX_BOMB)) {
@@ -58,7 +62,10 @@
       // 유동성 위기: + 아이템 출현 빈도 50% 감소
       if (debuffSystem && debuffSystem.hasDebuff && debuffSystem.hasDebuff(window.Game?.DEBUFFS?.LIQUIDITY_CRISIS)) {
         weights = weights.map(([type, weight]) => {
-          if (type === ITEM.MONEY || type === ITEM.POINT || type === ITEM.COUPON) {
+          // 현금 아이템들 (모든 현금 타입)
+          if (type === ITEM.CASH10 || type === ITEM.CASH50 || type === ITEM.CASH100 || 
+              type === ITEM.CASH500 || type === ITEM.CASH1000 || type === ITEM.CASH5000 || 
+              type === ITEM.CASH10000 || type === ITEM.CASH50000) {
             return [type, weight * 0.5]; // 50% 감소
           }
           return [type, weight];
@@ -141,7 +148,13 @@
         return Math.floor(base * scoreMultiplier);
       } else {
         // 양수 아이템: 콤보 배수 적용 후 디버프 적용
-        const baseScore = base * (comboMultiplier || 1.0);
+        let baseScore = base * (comboMultiplier || 1.0);
+        
+        // 연봉동결 디버프: 모든 금액을 10000원으로 변경
+        if (debuffSystem && debuffSystem.hasDebuff && debuffSystem.hasDebuff(DEBUFFS.SALARY_FREEZE)) {
+          baseScore = 10000;
+        }
+        
         let scoreMultiplier = 1.0;
         if (debuffSystem && debuffSystem.hasDebuff && debuffSystem.hasDebuff(DEBUFFS.KOSPI_DOWN)) {
           scoreMultiplier *= 0.5; // 코스피 하락: 50% 감소
@@ -182,9 +195,6 @@
         maxV *= 2.0;
       }
       
-      // 디버프: 환율 폭등 - 좌우 흔들림 효과
-      const exchangeRateSpike = debuffSystem?.hasDebuff?.(DEBUFFS.EXCHANGE_RATE_SPIKE);
-      
       // 모든 아이템 물리 업데이트
       for (let i = this.drops.length - 1; i >= 0; i--) {
         const d = this.drops[i];
@@ -196,19 +206,6 @@
         // 중력 적용
         d.vy = Math.min(maxV, d.vy + g * dt);
         d.y += d.vy * dt;
-        
-        // 환율 폭등: 좌우 흔들림 효과
-        if (exchangeRateSpike) {
-          if (!d.shakeOffset) {
-            d.shakeOffset = 0;
-            d.shakeSpeed = (Math.random() - 0.5) * 0.3;
-          }
-          d.shakeOffset += d.shakeSpeed * dt;
-          d.shakeSpeed += (Math.random() - 0.5) * 0.001 * dt;
-          d.shakeSpeed = Math.max(-0.5, Math.min(0.5, d.shakeSpeed));
-          d.x += d.shakeOffset * dt * 0.5;
-          d.x = Math.max(16, Math.min(world.w - 16, d.x)); // 화면 경계 제한
-        }
       }
     },
 

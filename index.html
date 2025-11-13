@@ -106,11 +106,11 @@
           <p><strong>게임 방법:</strong></p>
           <ul>
             <li>좌우 스와이프 또는 방향키로 요원을 이동하세요</li>
-            <li>돈(₩), 포인트(P), 쿠폰(%)을 받으세요</li>
+            <li>떨어지는 아까운 돈을 받으세요</li>
             <li>세금(TAX), 빚(DEBT)은 피하세요</li>
-            <li>돈, 포인트, 쿠폰 을 연속으로 받으면 콤보가 쌓입니다</li>
+            <li>돈을 연속으로 받으면 콤보가 쌓입니다</li>
             <li>콤보가 높을수록 점수 배수가 증가합니다</li>
-            <li>아이템을 놓치면 생명이 감소합니다 (최대 5개) </li>
+            <li>돈을 놓치면 생명이 감소합니다 (최대 5개) </li>
           </ul>
           <p><strong>콤보 배수:</strong></p>
           <ul>
@@ -129,14 +129,14 @@
   </main>
 
   <!-- 선택 오디오 -->
-  <audio id="sfx-catch"  src="assets/sound/catch_coin.mp3" preload="auto"></audio>
-  <audio id="sfx-penalty" src="assets/sound/minus item.mp3"    preload="auto"></audio>
-  <audio id="sfx-combo"   src="assets/sound/combo_up.mp3"    preload="auto"></audio>
+  <audio id="sfx-catch"  src="assets/sound/item_get.mp3" preload="auto"></audio>
+  <audio id="sfx-penalty" src="assets/sound/minus_item.mp3" preload="auto"></audio>
+  <audio id="sfx-combo"   src="assets/sound/combo_up.mp3" preload="auto"></audio>
   <audio id="sfx-clear"   src="assets/sound/level_up.mp3" preload="auto"></audio>
   <audio id="bgm"         src="assets/sound/background.mp3"    preload="auto" loop></audio>
  
 
-  <!-- 모듈 스크립트 (순서 중요) -->
+  <!-- 모듈 스크립트  -->
   <script src="js/config.js"></script>
   <script src="js/debuffs.js"></script>
   <script src="js/items.js"></script>
@@ -145,7 +145,7 @@
   <script src="js/input.js"></script>
   <script src="js/render.js"></script>
   <script src="js/ui.js"></script>
-  
+
   <!-- 메인 게임 스크립트 -->
   <script src="game.js"></script>
 </body>

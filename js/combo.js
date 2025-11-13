@@ -51,10 +51,9 @@
       const DEBUFFS = window.Game?.DEBUFFS || {};
       let duration = this.COMBO_DURATION;
       
-      // 디버프: 월요병/번아웃 - 콤보 유지 시간 50% 감소
+      // 디버프: 월요병 - 콤보 유지 시간 50% 감소
       if (debuffSystem?.hasDebuff) {
-        if (debuffSystem.hasDebuff(DEBUFFS.MONDAY_BLUES) || 
-            debuffSystem.hasDebuff(DEBUFFS.BURNOUT)) {
+        if (debuffSystem.hasDebuff(DEBUFFS.MONDAY_BLUES)) {
           duration *= 0.5;
         }
       }
@@ -92,10 +91,9 @@
       if (this.comboCount > 0 && this.comboTimeLeft > 0) {
         let decayRate = 1.0;
         
-        // 디버프: 월요병/번아웃 - 콤보 감소 속도 2배
+        // 디버프: 월요병 - 콤보 감소 속도 2배
         if (debuffSystem?.hasDebuff) {
-          if (debuffSystem.hasDebuff(DEBUFFS.MONDAY_BLUES) || 
-              debuffSystem.hasDebuff(DEBUFFS.BURNOUT)) {
+          if (debuffSystem.hasDebuff(DEBUFFS.MONDAY_BLUES)) {
             decayRate = 2.0;
           }
         }
@@ -137,8 +135,7 @@
       // 디버프에 따른 콤보 유지 시간 계산
       let duration = this.COMBO_DURATION;
       if (debuffSystem?.hasDebuff) {
-        if (debuffSystem.hasDebuff(DEBUFFS.MONDAY_BLUES) || 
-            debuffSystem.hasDebuff(DEBUFFS.BURNOUT)) {
+        if (debuffSystem.hasDebuff(DEBUFFS.MONDAY_BLUES)) {
           duration *= 0.5;
         }
       }

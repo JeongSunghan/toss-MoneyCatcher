@@ -107,11 +107,19 @@
   const toLoad = {
     agent_idle: "assets/agent_idle.png",
     agent_run: "assets/agent_run.png",
-    money: "assets/money.png",
-    point: "assets/point.png",
-    coupon: "assets/coupon.png",
-    tax: "assets/tax.png",
-    debt: "assets/debt.png",
+    // 돈 에셋 (동전)
+    cash10: "assets/money/coin_10.png",
+    cash50: "assets/money/coin_50.png",
+    cash100: "assets/money/coin_100.png",
+    cash500: "assets/money/coin_500.png",
+    // 돈 에셋 (지폐)
+    cash1000: "assets/money/bill_1000.png",
+    cash5000: "assets/money/bill_5000.png",
+    cash10000: "assets/money/bill_10000.png",
+    cash50000: "assets/money/bill_50000.png",
+    // 기타 아이템
+    tax: "assets/money/tax.png",
+    debt: "assets/money/debt.png",
   };
   let assetsLoaded = 0;
   const totalAssets = Object.keys(toLoad).length;
@@ -165,7 +173,7 @@
     gameOver = false,
     muted = false;
   let hearts = 5;
-  elHi.textContent = highScore;
+  elHi.textContent = `₩${highScore.toLocaleString('ko-KR')}`;
   
   // 관리자 모드
   let adminMode = {
@@ -251,7 +259,8 @@
   }
   function spawnOne() {
     if (ItemSystem?.spawnOne) {
-      ItemSystem.spawnOne(world, window.Game?.config, DebuffSystem);
+      const currentLevel = levelIndex + 1; // levelIndex는 0-based이므로 +1
+      ItemSystem.spawnOne(world, window.Game?.config, DebuffSystem, currentLevel);
     }
   }
   function spawnParticles(x, y, color, count = 8) {
@@ -368,6 +377,7 @@
       try {
         if (play && !muted) {
           bgm.volume = 0.3; // BGM 볼륨 감소 (0.5에서 0.3으로)
+          updateBGMTempo(); // 레벨에 맞는 템포 적용
           bgm.play().catch(err => {
             if (err.name !== 'NotAllowedError') {
               console.warn("[Sound] Failed to play BGM:", err);
@@ -383,11 +393,36 @@
     }
   }
 
+  /**
+   * 레벨에 따른 BGM 템포 업데이트
+   * 레벨 1-3: 100 BPM (기본 속도 1.0x)
+   * 레벨 4-6: 120 BPM (1.2x)
+   * 레벨 7-10: 140 BPM (1.4x)
+   */
+  function updateBGMTempo() {
+    const bgm = $("bgm");
+    if (!bgm) return;
+    
+    const currentLevel = levelIndex + 1; // levelIndex는 0-based이므로 +1
+    let playbackRate = 1.0;
+    
+    if (currentLevel <= 3) {
+      playbackRate = 1.0; // 레벨 1-3: 100 BPM (기본 속도)
+    } else if (currentLevel <= 6) {
+      playbackRate = 1.2; // 레벨 4-6: 120 BPM (1.2x)
+    } else {
+      playbackRate = 1.4; // 레벨 7-10: 140 BPM (1.4x)
+    }
+    
+    bgm.playbackRate = playbackRate;
+  }
+
   // ============================================
   // 게임 로직
   // ============================================
   function collect(type) {
     const base = SCORE[type] || 0;
+    const currentLevel = levelIndex + 1; // levelIndex는 0-based이므로 +1
     
     if (type === ITEM.TAX || type === ITEM.DEBT) {
       if (ComboSystem?.comboCount > 0) {
@@ -395,22 +430,42 @@
         popBanner("콤보 초기화!");
       }
       
-      let itemScore = base;
-      if (ItemSystem?.calculateScore) {
-        itemScore = ItemSystem.calculateScore(type, getComboCount(), isFeverTime(), DebuffSystem, adminMode, 1.0);
-    } else {
-        let mult = 1.0;
-        if (hasDebuff(DEBUFFS.KOSPI_DOWN)) mult *= 0.5;
-        if (type === ITEM.DEBT && hasDebuff(DEBUFFS.INTEREST_RATE_UP)) mult *= 2.0;
-        if (isFeverTime()) mult = 1.0;
-        if (adminMode.enabled) mult *= adminMode.scoreMultiplier;
-        itemScore = Math.floor(base * mult);
+      // 레벨별 퍼센트 차감 계산
+      let percentDeduction = 0;
+      if (type === ITEM.TAX) {
+        // 세금: 레벨별 현재 금액의 % 차감
+        if (currentLevel <= 2) percentDeduction = 0.03;      // 3%
+        else if (currentLevel <= 5) percentDeduction = 0.07; // 7%
+        else if (currentLevel <= 8) percentDeduction = 0.12; // 12%
+        else percentDeduction = 0.25;                         // 25%
+      } else if (type === ITEM.DEBT) {
+        // 빚: 레벨별 현재 금액의 % 차감
+        if (currentLevel <= 2) percentDeduction = 0.01;       // 1%
+        else if (currentLevel <= 5) percentDeduction = 0.03;  // 3%
+        else if (currentLevel <= 8) percentDeduction = 0.05;  // 5%
+        else percentDeduction = 0.10;                        // 10%
       }
       
-      score += itemScore;
+      // FEVER 타임: 세금/빚 차감 무시
+      let itemScore = 0;
+      if (!isFeverTime()) {
+        itemScore = Math.floor(score * percentDeduction);
+        
+        // 금리 인상: 빚 아이템 차감 2배
+        if (type === ITEM.DEBT && hasDebuff(DEBUFFS.INTEREST_RATE_UP)) {
+          itemScore *= 2.0;
+        }
+        
+        // 관리자 모드: 점수 배수 적용
+        if (adminMode.enabled) {
+          itemScore *= adminMode.scoreMultiplier;
+        }
+      }
+      
+      score = Math.max(0, score - itemScore); // 점수는 0 이하로 내려가지 않음
       vibrate(40);
       shake(8, 200);
-      playSound("sfx-penalty", 0.6); // TAX/DEBT 수집 사운드
+      playSound("sfx-penalty", 0.9); // TAX/DEBT 수집 사운드 (볼륨 증가: 0.6 → 0.9)
     } else {
       // + 아이템 수집
       if (ComboSystem?.incrementCombo) {
@@ -425,19 +480,26 @@
       const comboCount = getComboCount();
       const mult = getComboMultiplier(comboCount);
       let itemScore = base;
+      
+      // 연봉동결 디버프: 모든 금액을 10000원으로 변경
+      if (hasDebuff(DEBUFFS.SALARY_FREEZE)) {
+        itemScore = 10000;
+      }
+      
       if (ItemSystem?.calculateScore) {
         itemScore = ItemSystem.calculateScore(type, comboCount, isFeverTime(), DebuffSystem, adminMode, mult);
     } else {
         let scoreMult = mult;
         if (hasDebuff(DEBUFFS.KOSPI_DOWN)) scoreMult *= 0.5;
         if (hasDebuff(DEBUFFS.SAVING_OBSESSION)) scoreMult *= 0.7;
+        // FEVER 타임: 현금을 2배로 획득
         if (isFeverTime()) scoreMult *= 2.0;
         if (adminMode.enabled) scoreMult *= adminMode.scoreMultiplier;
-        itemScore = Math.floor(base * scoreMult);
+        itemScore = Math.floor(itemScore * scoreMult);
       }
       
       score += itemScore;
-      playSound("sfx-catch", 0.7); // + 아이템 수집 사운드
+      playSound("sfx-catch", 0.9); // + 아이템 수집 사운드 (볼륨 증가: 0.7 → 0.9)
       checkLevelUp();
     }
   }
@@ -445,9 +507,22 @@
   function checkLevelUp() {
     const newLevel = Math.min(MAX_LEVEL - 1, Math.floor(score / LEVEL_SCORE_INTERVAL));
     if (newLevel > levelIndex) {
+      const prevLevel = levelIndex;
       levelIndex = newLevel;
       popBanner(`레벨 업! LV ${LV[levelIndex]?.id || levelIndex + 1} 🎉`);
       playSound("sfx-clear", 0.8); // 레벨업 사운드
+      
+      // 레벨이 변경되면 BGM 템포 업데이트
+      const prevLevelNum = prevLevel + 1;
+      const newLevelNum = levelIndex + 1;
+      
+      // 템포 구간이 변경되었는지 확인 (1-3, 4-6, 7-10)
+      const prevTempoGroup = prevLevelNum <= 3 ? 1 : (prevLevelNum <= 6 ? 2 : 3);
+      const newTempoGroup = newLevelNum <= 3 ? 1 : (newLevelNum <= 6 ? 2 : 3);
+      
+      if (prevTempoGroup !== newTempoGroup) {
+        updateBGMTempo(); // 템포 구간이 변경되었을 때만 업데이트
+      }
       
       if (levelIndex >= 1) {
         const maxStack = getMaxDebuffStack(levelIndex + 1);
@@ -496,13 +571,40 @@
   function updateDebuff() {
     const now = performance.now();
     const currentDebuffs = getActiveDebuffs();
-    const filteredDebuffs = currentDebuffs.filter(debuff => {
-      const elapsed = now - debuff.startTime;
-      return elapsed < debuff.duration;
-    });
-    setActiveDebuffs(filteredDebuffs);
     
-    if (levelIndex >= 1 && !paused && !gameOver) {
+    // FEVER 타임 중에는 디버프 시간이 멈춤 (startTime을 조정하여 경과 시간을 동결)
+    if (isFeverTime()) {
+      // FEVER 타임 중에는 디버프를 필터링만 하고 시간은 업데이트하지 않음
+      // (startTime을 조정하여 경과 시간을 동결시키는 대신, 필터링만 수행)
+      const filteredDebuffs = currentDebuffs.filter(debuff => {
+        // FEVER 타임 시작 시점의 남은 시간을 유지
+        if (!debuff.feverPausedTime) {
+          debuff.feverPausedTime = now; // FEVER 타임 시작 시점 기록
+          debuff.feverPausedRemaining = debuff.duration - (now - debuff.startTime); // 남은 시간 기록
+        }
+        return debuff.feverPausedRemaining > 0; // 남은 시간이 있으면 유지
+      });
+      setActiveDebuffs(filteredDebuffs);
+    } else {
+      // FEVER 타임이 아닐 때는 정상적으로 시간 경과 처리
+      const filteredDebuffs = currentDebuffs.map(debuff => {
+        // FEVER 타임이 끝났으면 startTime을 조정하여 남은 시간을 반영
+        if (debuff.feverPausedTime) {
+          const pausedDuration = now - debuff.feverPausedTime; // FEVER 타임 동안 멈춘 시간
+          debuff.startTime = now - (debuff.feverPausedRemaining || 0); // 남은 시간을 반영하여 startTime 조정
+          debuff.feverPausedTime = null; // 초기화
+          debuff.feverPausedRemaining = null; // 초기화
+        }
+        return debuff;
+      }).filter(debuff => {
+        const elapsed = now - debuff.startTime;
+        return elapsed < debuff.duration;
+      });
+      setActiveDebuffs(filteredDebuffs);
+    }
+    
+    // FEVER 타임 중에는 새로운 디버프 생성 안 함
+    if (levelIndex >= 1 && !paused && !gameOver && !isFeverTime()) {
       const maxStack = getMaxDebuffStack(levelIndex + 1);
       const nextTime = getDebuffNextTime();
       const currentDebuffsAfterFilter = getActiveDebuffs();
@@ -599,10 +701,10 @@
         updateDebuff,
       });
     } else {
-      elScore.textContent = score;
+      elScore.textContent = `₩${score.toLocaleString('ko-KR')}`;
       elCombo.textContent = `×${getComboCount() || 1}`;
       elLevel.textContent = `LV ${LV[levelIndex]?.id || levelIndex + 1}`;
-      elHi.textContent = highScore;
+      elHi.textContent = `₩${highScore.toLocaleString('ko-KR')}`;
       updateHearts();
     updateComboUI();
       updateDebuff();
@@ -738,14 +840,14 @@
         }
       }
       
-      // 구독료 폭탄 디버프 처리
+      // 구독료 폭탄 디버프 처리 (2초마다 1000원 차감)
       if (hasDebuff(DEBUFFS.SUBSCRIPTION_BOMB)) {
         const subscriptionNow = performance.now();
         const nextCharge = getSubscriptionBombNextCharge();
         if (nextCharge === 0 || subscriptionNow >= nextCharge) {
-          score = Math.max(0, score - 10);
+          score = Math.max(0, score - 1000); // 2초마다 1000원 차감
           setSubscriptionBombNextCharge(subscriptionNow + 2000);
-          if (score > 0) popBanner("구독료 차감 -10점 💳", 1000);
+          if (score > 0) popBanner("구독료 차감 -1,000원 💳", 1000);
         }
       } else {
         setSubscriptionBombNextCharge(0);
@@ -839,14 +941,12 @@
         ctx.shadowBlur = 20;
         ctx.filter = "brightness(1.2)";
       }
-      if (hasDebuff(DEBUFFS.BURNOUT) && !isFeverTime()) {
-        ctx.filter = "grayscale(100%)";
-      }
+      // 연봉동결 디버프는 collect 함수에서 처리 (모든 금액을 10000원으로 변경)
       
       for (const d of getDrops()) {
         if (d && d.alive) {
           if (hasDebuff(DEBUFFS.FOMO_SYNDROME) && (d.type === ITEM.TAX || d.type === ITEM.DEBT)) {
-            const fakeType = ITEM.MONEY;
+            const fakeType = ITEM.CASH1000; // FOMO 증후군: 세금/빚을 1000원으로 위장
             ctx.fillStyle = COLOR[fakeType] || "#999";
       ctx.beginPath();
             ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
@@ -950,7 +1050,8 @@
     gameOver = false;
     paused = false;
     
-    // BGM 재생
+    // BGM 재생 (레벨에 맞는 템포로)
+    updateBGMTempo(); // 초기 레벨(1)에 맞는 템포 설정
     playBGM(true);
     
     hideOverlay();
@@ -967,7 +1068,7 @@
     if (score > highScore) {
       highScore = score;
       localStorage.setItem("mc.highscore", String(highScore));
-      elHi.textContent = highScore;
+      elHi.textContent = `₩${highScore.toLocaleString('ko-KR')}`;
       btnReport.hidden = false;
       popBanner("신기록! 🎉");
     }

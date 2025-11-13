@@ -13,30 +13,20 @@
   // 디버프 타입 정의
   // ============================================
   Game.DEBUFFS = {
-    // 기본 디버프
     KOSPI_DOWN: "kospi_down",           // 점수 획득량 50% 감소
     TAX_BOMB: "tax_bomb",                // 세금/빚 출현 빈도 증가
     MONDAY_BLUES: "monday_blues",        // 콤보 게이지 감소 속도 증가
-    
-    // 경제/금융 관련
     INTEREST_RATE_UP: "interest_rate_up",       // 빚 아이템 감점 2배
-    EXCHANGE_RATE_SPIKE: "exchange_rate_spike", // 아이템 좌우 흔들림
     LIQUIDITY_CRISIS: "liquidity_crisis",        // + 아이템 출현 빈도 50% 감소
-    
-    // 직장/일상 관련
     OVERTIME_MODE: "overtime_mode",      // 화면 어두워짐
     MEETING_CALL: "meeting_call",       // 3초마다 0.5초 정지
     COFFEE_SHORTAGE: "coffee_shortage",  // 이동 속도 30% 감소
-    
-    // 심리/상태 관련
     PANIC_SELL: "panic_sell",            // 아이템 낙하 속도 2배
-    BURNOUT: "burnout",                 // 화면 흑백, 콤보 게이지 2배속 감소
+    SALARY_FREEZE: "salary_freeze",      // 연봉동결: 모든 금액이 10000원으로 변경
     FOMO_SYNDROME: "fomo_syndrome",      // - 아이템이 +로 위장
     SAVING_OBSESSION: "saving_obsession", // 획득 점수 30% 감소
-    
-    // 사회/시사 관련
     REAL_ESTATE_BOOM: "real_estate_boom",     // 화면 하단 30% 가려짐
-    SUBSCRIPTION_BOMB: "subscription_bomb",    // 2초마다 -10점
+    SUBSCRIPTION_BOMB: "subscription_bomb",    // 2초마다 구독료 차감
   };
   
   // ============================================
@@ -47,17 +37,16 @@
     [Game.DEBUFFS.TAX_BOMB]: { duration: 15000, name: "💣 세금 폭탄", desc: "세금/빚 출현 빈도 증가" },
     [Game.DEBUFFS.MONDAY_BLUES]: { duration: 15000, name: "😴 월요병", desc: "콤보 게이지 감소 속도 증가" },
     [Game.DEBUFFS.INTEREST_RATE_UP]: { duration: 15000, name: "📈 금리 인상", desc: "빚 아이템 감점 2배" },
-    [Game.DEBUFFS.EXCHANGE_RATE_SPIKE]: { duration: 12000, name: "💱 환율 폭등", desc: "아이템 좌우 흔들림" },
     [Game.DEBUFFS.LIQUIDITY_CRISIS]: { duration: 15000, name: "💧 유동성 위기", desc: "+ 아이템 출현 50% 감소" },
     [Game.DEBUFFS.OVERTIME_MODE]: { duration: 10000, name: "🌙 야근 모드", desc: "화면 어두워짐" },
     [Game.DEBUFFS.MEETING_CALL]: { duration: 12000, name: "📞 회의 소환", desc: "3초마다 0.5초 정지" },
     [Game.DEBUFFS.COFFEE_SHORTAGE]: { duration: 10000, name: "☕ 커피 부족", desc: "이동 속도 30% 감소" },
     [Game.DEBUFFS.PANIC_SELL]: { duration: 8000, name: "😱 패닉셀", desc: "낙하 속도 2배" },
-    [Game.DEBUFFS.BURNOUT]: { duration: 10000, name: "😵 번아웃", desc: "화면 흑백, 콤보 2배속 감소" },
+    [Game.DEBUFFS.SALARY_FREEZE]: { duration: 10000, name: "❄️ 연봉동결", desc: "모든 금액이 10000원으로 변경" },
     [Game.DEBUFFS.FOMO_SYNDROME]: { duration: 12000, name: "🤯 FOMO 증후군", desc: "- 아이템이 +로 위장" },
     [Game.DEBUFFS.SAVING_OBSESSION]: { duration: 20000, name: "🔒 저축 강박", desc: "획득 점수 30% 잠금" },
     [Game.DEBUFFS.REAL_ESTATE_BOOM]: { duration: 15000, name: "🏠 부동산 폭등", desc: "화면 하단 30% 가려짐" },
-    [Game.DEBUFFS.SUBSCRIPTION_BOMB]: { duration: 12000, name: "💳 구독료 폭탄", desc: "2초마다 -10점" },
+    [Game.DEBUFFS.SUBSCRIPTION_BOMB]: { duration: 12000, name: "💳 구독료 폭탄", desc: "2초마다 -1000원" },
   };
   
   // ============================================
@@ -75,24 +64,26 @@
     
     /**
      * 레벨별 디버프 발생 주기 반환
+     * 레벨이 올라갈수록 더 빠르게 발생합니다.
      * @param {number} level - 현재 레벨
      * @returns {number} 디버프 발생 주기 (밀리초)
      */
     getDebuffInterval(level) {
-      if (level <= 3) return 45000;  // 초반: 45초
-      if (level <= 5) return 40000; // 중반: 40초
-      return 30000;                   // 후반: 30초
+      if (level <= 2) return 50000;      // 레벨 1-2: 50초
+      if (level <= 4) return 40000;     // 레벨 3-4: 40초
+      if (level <= 6) return 30000;     // 레벨 5-6: 30초
+      if (level <= 8) return 20000;     // 레벨 7-8: 20초
+      return 15000;                      // 레벨 9-10: 15초
     },
     
     /**
-     * 레벨별 최대 디버프 중첩 수 반환
-     * @param {number} level - 현재 레벨
-     * @returns {number} 최대 중첩 가능한 디버프 개수
+     * 최대 디버프 중첩 수 반환
+     * 레벨과 관계없이 항상 1개로 고정합니다.
+     * @param {number} level - 현재 레벨 (사용하지 않음)
+     * @returns {number} 최대 중첩 가능한 디버프 개수 (항상 1)
      */
     getMaxDebuffStack(level) {
-      if (level <= 5) return 1;  // 초반: 1개
-      if (level <= 8) return 2;  // 중반: 2개
-      return 3;                   // 후반: 3개
+      return 1; // 항상 1개만 중첩 가능
     },
     
     /**

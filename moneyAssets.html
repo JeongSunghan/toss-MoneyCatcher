@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>한국 화폐 에셋 생성기</title>
+  <style>
+    body {
+      font-family: 'Malgun Gothic', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    
+    h1 {
+      color: white;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      color: rgba(255,255,255,0.9);
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      max-width: 900px;
+      width: 100%;
+    }
+    
+    .section {
+      margin-bottom: 40px;
+    }
+    
+    .section-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #333;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 5px;
+    }
+    
+    .items {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .item {
+      text-align: center;
+    }
+    
+    canvas {
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s;
+      background: white;
+    }
+    
+    canvas:hover {
+      transform: scale(1.05);
+      border-color: #667eea;
+    }
+    
+    .label {
+      margin-top: 8px;
+      font-weight: bold;
+      color: #666;
+    }
+    
+    .download-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-top: 5px;
+      transition: background 0.3s;
+    }
+    
+    .download-btn:hover {
+      background: #5568d3;
+    }
+    
+    .download-all {
+      background: #764ba2;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 20px;
+      transition: background 0.3s;
+    }
+    
+    .download-all:hover {
+      background: #653a8a;
+    }
+    
+    .info {
+      background: #f0f4ff;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      color: #555;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>💰 한국 화폐 픽셀 아트 생성기</h1>
+  <p class="subtitle">클릭하면 개별 다운로드 가능합니다</p>
+  
+  <div class="container">
+    <div class="section">
+      <div class="section-title">🪙 동전 (Coins)</div>
+      <div class="items" id="coins"></div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">💵 지폐 (Bills)</div>
+      <div class="items" id="bills"></div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">💸 디버프 아이템 (Debuffs)</div>
+      <div class="items" id="debuffs"></div>
+    </div>
+    
+    <button class="download-all" onclick="downloadAll()">
+      📥 모든 에셋 다운로드 (12개)
+    </button>
+    
+    <div class="info">
+      💡 <strong>사용 방법:</strong><br>
+      1. 각 이미지를 클릭하거나 "다운로드" 버튼 클릭<br>
+      2. 또는 "모든 에셋 다운로드" 버튼으로 한번에 저장<br>
+      3. 게임에 assets/money/ 폴더에 넣어서 사용하세요!
+    </div>
+  </div>
+
+  <script>
+    // 동전 그리기
+    function drawCoin(canvas, value, color, borderColor) {
+      const ctx = canvas.getContext('2d');
+      const size = 48;
+      canvas.width = size;
+      canvas.height = size;
+      
+      const centerX = size / 2;
+      const centerY = size / 2;
+      const radius = size / 2 - 4;
+      
+      // 그림자
+      ctx.beginPath();
+      ctx.arc(centerX + 2, centerY + 2, radius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fill();
+      
+      // 테두리
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.fillStyle = borderColor;
+      ctx.fill();
+      
+      // 메인 색상
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 3, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      
+      // 내부 원
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 6, 0, Math.PI * 2);
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      
+      // 숫자
+      ctx.fillStyle = borderColor;
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(value, centerX, centerY);
+    }
+    
+    // 지폐 그리기
+    function drawBill(canvas, value, name, color, borderColor) {
+      const ctx = canvas.getContext('2d');
+      const width = 96;
+      const height = 64;
+      canvas.width = width;
+      canvas.height = height;
+      
+      // 그림자
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(2, 2, width - 4, height - 4);
+      
+      // 배경
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, width, height);
+      
+      // 테두리
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(1.5, 1.5, width - 3, height - 3);
+      
+      // 내부 테두리
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(5, 5, width - 10, height - 10);
+      
+      // 금액만 표시 (큰 글씨, 중앙)
+      ctx.fillStyle = borderColor;
+      ctx.font = 'bold 28px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(value, width / 2, height / 2);
+    }
+    
+    // 세금 아이콘 그리기
+    function drawTax(canvas) {
+      const ctx = canvas.getContext('2d');
+      const size = 64;
+      canvas.width = size;
+      canvas.height = size;
+      
+      // 배경을 투명하게
+      ctx.clearRect(0, 0, size, size);
+      
+      // 그림자
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(12, 12, size - 14, size - 14);
+      
+      // 배경 (빨간 서류)
+      ctx.fillStyle = '#FF6B6B';
+      ctx.fillRect(10, 10, size - 20, size - 20);
+      
+      // 테두리
+      ctx.strokeStyle = '#CC0000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(10, 10, size - 20, size - 20);
+      
+      // 상단 라벨
+      ctx.fillStyle = '#CC0000';
+      ctx.fillRect(10, 10, size - 20, 12);
+      
+      // 서류 줄무늬
+      ctx.strokeStyle = '#FF9999';
+      ctx.lineWidth = 1;
+      for(let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(15, 28 + i * 6);
+        ctx.lineTo(size - 15, 28 + i * 6);
+        ctx.stroke();
+      }
+      
+      // 세금 텍스트
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 10px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('TAX', size / 2, 18);
+      
+      ctx.fillStyle = '#CC0000';
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText('세금', size / 2, 52);
+      
+      // 느낌표
+      ctx.fillStyle = '#FF0000';
+      ctx.font = 'bold 20px Arial';
+      ctx.fillText('!', size / 2 + 15, 48);
+    }
+    
+    // 빚 아이콘 그리기
+    function drawDebt(canvas) {
+      const ctx = canvas.getContext('2d');
+      const size = 64;
+      canvas.width = size;
+      canvas.height = size;
+      
+      // 배경을 투명하게
+      ctx.clearRect(0, 0, size, size);
+      
+      // 그림자
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.arc(size / 2 + 2, size / 2 + 2, 26, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 폭탄 몸통 (검은색 원)
+      ctx.fillStyle = '#333333';
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, 24, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 하이라이트
+      ctx.fillStyle = '#555555';
+      ctx.beginPath();
+      ctx.arc(size / 2 - 6, size / 2 - 6, 8, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 심지
+      ctx.strokeStyle = '#8B4513';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(size / 2 + 10, size / 2 - 18);
+      ctx.lineTo(size / 2 + 18, size / 2 - 26);
+      ctx.stroke();
+      
+      // 불꽃
+      ctx.fillStyle = '#FF6B00';
+      ctx.beginPath();
+      ctx.arc(size / 2 + 18, size / 2 - 26, 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.arc(size / 2 + 18, size / 2 - 26, 2, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // 빚 텍스트
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('빚', size / 2, size / 2 + 2);
+      
+      // 마이너스 기호 (하단)
+      ctx.fillStyle = '#FF0000';
+      ctx.font = 'bold 20px Arial';
+      ctx.fillText('-', size / 2, size - 8);
+    }
+    
+    // 금리인상 아이콘
+    function drawInterestRate(canvas) {
+      const ctx = canvas.getContext('2d');
+      const size = 64;
+      canvas.width = size;
+      canvas.height = size;
+      
+      // 배경을 투명하게
+      ctx.clearRect(0, 0, size, size);
+      
+      // 배경 (경고 삼각형)
+      ctx.fillStyle = '#FFA500';
+      ctx.beginPath();
+      ctx.moveTo(size / 2, 10);
+      ctx.lineTo(size - 10, size - 10);
+      ctx.lineTo(10, size - 10);
+      ctx.closePath();
+      ctx.fill();
+      
+      ctx.strokeStyle = '#FF6B00';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      
+      // 상승 화살표
+      ctx.fillStyle = '#CC0000';
+      ctx.strokeStyle = '#CC0000';
+      ctx.lineWidth = 4;
+      
+      // 화살표 선
+      ctx.beginPath();
+      ctx.moveTo(size / 2, size - 15);
+      ctx.lineTo(size / 2, 25);
+      ctx.stroke();
+      
+      // 화살촉
+      ctx.beginPath();
+      ctx.moveTo(size / 2, 25);
+      ctx.lineTo(size / 2 - 8, 35);
+      ctx.lineTo(size / 2 + 8, 35);
+      ctx.closePath();
+      ctx.fill();
+      
+      // 텍스트
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 10px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('금리UP', size / 2, size - 4);
+    }
+    
+    // 구독료 아이콘
+    function drawSubscription(canvas) {
+      const ctx = canvas.getContext('2d');
+      const size = 64;
+      canvas.width = size;
+      canvas.height = size;
+      
+      // 배경을 투명하게
+      ctx.clearRect(0, 0, size, size);
+      
+      // 신용카드 모양
+      ctx.fillStyle = '#6366F1';
+      ctx.fillRect(8, 18, size - 16, 28);
+      
+      ctx.strokeStyle = '#4338CA';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(8, 18, size - 16, 28);
+      
+      // 마그네틱 띠
+      ctx.fillStyle = '#1E1B4B';
+      ctx.fillRect(8, 24, size - 16, 6);
+      
+      // 카드 칩
+      ctx.fillStyle = '#FCD34D';
+      ctx.fillRect(14, 34, 8, 8);
+      
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(14, 34, 8, 8);
+      
+      // 텍스트
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 8px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('CARD', 26, 40);
+      
+      // 마이너스 표시 (여러 개)
+      ctx.fillStyle = '#FF0000';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('- - -', size / 2, size - 8);
+      
+      // 상단 라벨
+      ctx.fillStyle = '#4338CA';
+      ctx.font = 'bold 9px Arial';
+      ctx.fillText('구독료', size / 2, 14);
+    }
+    
+    // 동전 생성
+    const coins = [
+      { value: '10', color: '#B87333', borderColor: '#8B4513', name: '10원' },  // 진한 구리
+      { value: '50', color: '#D4A574', borderColor: '#B8956A', name: '50원' },  // 연한 구리
+      { value: '100', color: '#E8E8E8', borderColor: '#A0A0A0', name: '100원' }, // 은색
+      { value: '500', color: '#C0C0C0', borderColor: '#808080', name: '500원' }  // 진한 은색
+    ];
+    
+    const coinsContainer = document.getElementById('coins');
+    coins.forEach(coin => {
+      const item = document.createElement('div');
+      item.className = 'item';
+      
+      const canvas = document.createElement('canvas');
+      drawCoin(canvas, coin.value, coin.color, coin.borderColor);
+      
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = coin.name;
+      
+      const btn = document.createElement('button');
+      btn.className = 'download-btn';
+      btn.textContent = '다운로드';
+      btn.onclick = () => downloadImage(canvas, `coin_${coin.value}.png`);
+      
+      canvas.onclick = () => downloadImage(canvas, `coin_${coin.value}.png`);
+      
+      item.appendChild(canvas);
+      item.appendChild(label);
+      item.appendChild(btn);
+      coinsContainer.appendChild(item);
+    });
+    
+    // 지폐 생성
+    const bills = [
+      { value: '1000', name: '천원', color: '#6B9BD1', borderColor: '#2E5C8A' },
+      { value: '5000', name: '오천원', color: '#E89B7E', borderColor: '#C67858' },
+      { value: '10000', name: '만원', color: '#A8D5A8', borderColor: '#6B8E6B' },
+      { value: '50000', name: '오만원', color: '#F4E04D', borderColor: '#C4B03D' }
+    ];
+    
+    const billsContainer = document.getElementById('bills');
+    bills.forEach(bill => {
+      const item = document.createElement('div');
+      item.className = 'item';
+      
+      const canvas = document.createElement('canvas');
+      drawBill(canvas, bill.value, bill.name, bill.color, bill.borderColor);
+      
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = bill.name;
+      
+      const btn = document.createElement('button');
+      btn.className = 'download-btn';
+      btn.textContent = '다운로드';
+      btn.onclick = () => downloadImage(canvas, `bill_${bill.value}.png`);
+      
+      canvas.onclick = () => downloadImage(canvas, `bill_${bill.value}.png`);
+      
+      item.appendChild(canvas);
+      item.appendChild(label);
+      item.appendChild(btn);
+      billsContainer.appendChild(item);
+    });
+    
+    // 디버프 아이템 생성
+    const debuffs = [
+      { name: '세금', drawFunc: drawTax, filename: 'tax' },
+      { name: '빚 폭탄', drawFunc: drawDebt, filename: 'debt' },
+      { name: '금리 인상', drawFunc: drawInterestRate, filename: 'interest' },
+      { name: '구독료', drawFunc: drawSubscription, filename: 'subscription' }
+    ];
+    
+    const debuffsContainer = document.getElementById('debuffs');
+    debuffs.forEach(debuff => {
+      const item = document.createElement('div');
+      item.className = 'item';
+      
+      const canvas = document.createElement('canvas');
+      debuff.drawFunc(canvas);
+      
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = debuff.name;
+      
+      const btn = document.createElement('button');
+      btn.className = 'download-btn';
+      btn.textContent = '다운로드';
+      btn.onclick = () => downloadImage(canvas, `debuff_${debuff.filename}.png`);
+      
+      canvas.onclick = () => downloadImage(canvas, `debuff_${debuff.filename}.png`);
+      
+      item.appendChild(canvas);
+      item.appendChild(label);
+      item.appendChild(btn);
+      debuffsContainer.appendChild(item);
+    });
+    
+    // 이미지 다운로드
+    function downloadImage(canvas, filename) {
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+    
+    // 모두 다운로드
+    function downloadAll() {
+      alert('자동 다운로드를 시작합니다!\n\n동전 4개 + 지폐 4개 + 디버프 4개 = 총 12개 파일');
+      
+      // 자동으로 순차 다운로드
+      setTimeout(() => {
+        const allCanvas = document.querySelectorAll('canvas');
+        allCanvas.forEach((canvas, index) => {
+          setTimeout(() => {
+            let filename;
+            if (index < 4) {
+              // 동전
+              const value = ['10', '50', '100', '500'][index];
+              filename = `coin_${value}.png`;
+            } else if (index < 8) {
+              // 지폐
+              const value = ['1000', '5000', '10000', '50000'][index - 4];
+              filename = `bill_${value}.png`;
+            } else {
+              // 디버프
+              const name = ['tax', 'debt', 'interest', 'subscription'][index - 8];
+              filename = `debuff_${name}.png`;
+            }
+            downloadImage(canvas, filename);
+          }, index * 500);
+        });
+      }, 100);
+    }
+  </script>
+</body>
+</html>
