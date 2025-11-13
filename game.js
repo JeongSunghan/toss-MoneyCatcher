@@ -314,25 +314,47 @@
 
   /**
    * 사운드 효과 재생
+   * 오디오를 clone하여 동시 재생 가능하게 하고, 앞부분 빈 공간을 건너뜁니다.
    * @param {string} soundId - 오디오 요소 ID
    * @param {number} volume - 볼륨 (0.0 ~ 1.0, 기본값 0.7)
+   * @param {number} skipTime - 건너뛸 시간 (초, 기본값 0.1)
    */
-  function playSound(soundId, volume = 0.7) {
+  function playSound(soundId, volume = 0.7, skipTime = 0.1) {
     if (muted) return;
     const audio = $(soundId);
-    if (audio) {
-      try {
-        audio.volume = volume;
-        audio.currentTime = 0; // 처음부터 재생
-        audio.play().catch(err => {
+    if (!audio || !audio.src) return;
+    
+    try {
+      // 새로운 Audio 객체를 생성하여 동시 재생 가능하게 함
+      const audioInstance = new Audio(audio.src);
+      audioInstance.volume = volume;
+      
+      // 오디오가 로드되면 앞부분 빈 공간을 건너뛰고 재생
+      const playAudio = () => {
+        audioInstance.currentTime = skipTime; // 앞부분 빈 공간 건너뛰기
+        audioInstance.play().catch(err => {
           // 자동 재생 정책으로 인한 오류는 무시
           if (err.name !== 'NotAllowedError') {
             console.warn(`[Sound] Failed to play ${soundId}:`, err);
           }
         });
-      } catch (err) {
-        console.warn(`[Sound] Error playing ${soundId}:`, err);
+      };
+      
+      // 오디오가 이미 로드되었으면 즉시 재생, 아니면 로드 대기
+      if (audioInstance.readyState >= 2) { // HAVE_CURRENT_DATA 이상
+        playAudio();
+      } else {
+        audioInstance.addEventListener('canplay', playAudio, { once: true });
+        audioInstance.load(); // 오디오 로드 시작
       }
+      
+      // 재생 완료 후 메모리 정리 (이벤트 리스너 제거)
+      audioInstance.addEventListener('ended', () => {
+        audioInstance.removeEventListener('canplay', playAudio);
+        audioInstance.src = '';
+      }, { once: true });
+    } catch (err) {
+      console.warn(`[Sound] Error playing ${soundId}:`, err);
     }
   }
 
@@ -1156,6 +1178,34 @@
     e.stopPropagation();
     openTossApp("toss://asset-report", "https://toss.im/asset");
   });
+
+  // ============================================
+  // 오디오 사전 로드 및 준비
+  // ============================================
+  function preloadAudio() {
+    const audioIds = ["sfx-catch", "sfx-penalty", "sfx-combo", "sfx-clear"];
+    audioIds.forEach(id => {
+      const audio = $(id);
+      if (audio) {
+        // 오디오를 미리 로드하여 재생 지연 최소화
+        audio.load();
+        // 일부 브라우저에서 오디오가 준비될 때까지 대기
+        if (audio.readyState < 2) {
+          audio.addEventListener('canplay', () => {
+            // 오디오가 준비되면 currentTime을 0.1초로 설정하여 앞부분 빈 공간 건너뛰기 준비
+            audio.currentTime = 0.1;
+          }, { once: true });
+        }
+      }
+    });
+  }
+  
+  // 페이지 로드 시 오디오 사전 로드
+  if (document.readyState === "loading") {
+    window.addEventListener("load", preloadAudio, { once: true });
+  } else {
+    preloadAudio();
+  }
 
   // ============================================
   // 초기화
