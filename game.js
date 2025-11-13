@@ -90,6 +90,7 @@
     tutorialOverlay = $("tutorial-overlay"),
     ovTitle = $("ov-title"),
     ovSub = $("ov-sub"),
+    ovStats = $("ov-stats"),
     btnStartPrologue = $("btn-start-prologue"),
     btnStart = $("btn-start"),
     btnTutorial = $("btn-tutorial"),
@@ -101,6 +102,11 @@
   const banner = $("banner"),
     fill = $("combo-fill"),
     multEl = $("combo-mult");
+  const btnTutorialPrev = $("btn-tutorial-prev"),
+    btnTutorialNext = $("btn-tutorial-next"),
+    tutorialPageIndicator = $("tutorial-page-indicator"),
+    tutorialDebuffs = $("tutorial-debuffs"),
+    tutorialBuffs = $("tutorial-buffs");
 
   // ============================================
   // Asset 로딩
@@ -158,12 +164,14 @@
   // 모듈 시스템 참조
   // ============================================
   const DebuffSystem = window.Game?.DebuffSystem;
+  const BuffSystem = window.Game?.BuffSystem;
   const ItemSystem = window.Game?.ItemSystem;
   const ComboSystem = window.Game?.ComboSystem;
   const AgentSystem = window.Game?.AgentSystem;
   const InputSystem = window.Game?.InputSystem;
   const RenderSystem = window.Game?.RenderSystem;
   const UISystem = window.Game?.UISystem;
+  const BUFFS = window.Game?.BUFFS || {};
 
   // ============================================
   // 게임 상태
@@ -432,6 +440,37 @@
     const base = SCORE[type] || 0;
     const currentLevel = levelIndex + 1; // levelIndex는 0-based이므로 +1
     
+    // 버프 아이템 처리
+    if (type === ITEM.BUFF_GOLDEN_TIME) {
+      // 조기퇴근: 생명력 회복/보너스 목숨
+      const maxHearts = 5;
+      if (hearts < maxHearts) {
+        hearts = maxHearts;
+        updateHearts();
+        popBanner("🏃 조기퇴근! 생명력 회복!", 2000);
+      } else {
+        hearts = Math.min(maxHearts + 1, hearts + 1); // 보너스 목숨 +1
+        updateHearts();
+        popBanner("🏃 조기퇴근! 보너스 목숨 +1!", 2000);
+      }
+      playSound("sfx-catch", 1.0);
+      return;
+    } else if (type === ITEM.BUFF_MAGNET) {
+      if (BuffSystem) {
+        BuffSystem.activateBuff(BUFFS.MAGNET, 5000); // 5초
+        popBanner("🧲 자석! 5초간 +아이템 자동 수집", 2000);
+        playSound("sfx-catch", 1.0);
+      }
+      return;
+    } else if (type === ITEM.BUFF_STOCK_BOOM) {
+      if (BuffSystem) {
+        BuffSystem.activateBuff(BUFFS.STOCK_BOOM, 3500); // 3.5초
+        popBanner("📈 미국 주식 떡상! 수표 폭풍!", 2000);
+        playSound("sfx-catch", 1.0);
+      }
+      return;
+    }
+    
     if (type === ITEM.TAX || type === ITEM.DEBT) {
       if (ComboSystem?.comboCount > 0) {
         resetCombo();
@@ -502,21 +541,22 @@
       const mult = getComboMultiplier(comboCount);
       let itemScore = base;
       
-      // 연봉동결 디버프: 모든 금액을 10000원으로 변경
+      // 연봉동결 디버프: 획득 점수가 없어짐 (0원)
       if (hasDebuff(DEBUFFS.SALARY_FREEZE)) {
-        itemScore = 10000;
-      }
-      
-      if (ItemSystem?.calculateScore) {
-        itemScore = ItemSystem.calculateScore(type, comboCount, isFeverTime(), DebuffSystem, adminMode, mult);
-    } else {
-        let scoreMult = mult;
-        if (hasDebuff(DEBUFFS.KOSPI_DOWN)) scoreMult *= 0.5;
-        if (hasDebuff(DEBUFFS.SAVING_OBSESSION)) scoreMult *= 0.7;
-        // FEVER 타임: 현금을 2배로 획득
-        if (isFeverTime()) scoreMult *= 2.0;
-        if (adminMode.enabled) scoreMult *= adminMode.scoreMultiplier;
-        itemScore = Math.floor(itemScore * scoreMult);
+        itemScore = 0;
+      } else {
+        if (ItemSystem?.calculateScore) {
+          itemScore = ItemSystem.calculateScore(type, comboCount, isFeverTime(), DebuffSystem, adminMode, mult);
+        } else {
+          let scoreMult = mult;
+          if (hasDebuff(DEBUFFS.KOSPI_DOWN)) scoreMult *= 0.5;
+          if (hasDebuff(DEBUFFS.SAVING_OBSESSION)) scoreMult *= 0.7;
+          // FEVER 타임: 현금을 2배로 획득
+          if (isFeverTime()) scoreMult *= 2.0;
+          // 조기퇴근 버프는 점수 배수 없음 (생명력 회복만)
+          if (adminMode.enabled) scoreMult *= adminMode.scoreMultiplier;
+          itemScore = Math.floor(itemScore * scoreMult);
+        }
       }
       
       score += itemScore;
@@ -608,6 +648,12 @@
       startTime: performance.now(),
       duration: debuffInfo.duration,
     };
+    // 실드 버프 체크: 디버프 무효화
+    if (BuffSystem && BuffSystem.useShield && BuffSystem.useShield()) {
+      popBanner("🛡️ 실드로 디버프 무효화!", 2000);
+      return; // 디버프 적용 안 함
+    }
+    
     const debuffs = getActiveDebuffs();
     debuffs.push(newDebuff);
     setActiveDebuffs(debuffs);
@@ -771,7 +817,38 @@
       updateHearts();
     updateComboUI();
       updateDebuff();
+      updateBuffsUI();
     }
+  }
+  
+  function updateBuffsUI() {
+    if (!buffsDisplay || !BuffSystem) return;
+    
+    const now = performance.now();
+    const activeBuffs = BuffSystem.activeBuffs || [];
+    
+    // 시간 제한 버프들만 필터링
+    const timeBuffs = activeBuffs.filter(b => b.endTime > now);
+    
+    // 모든 버프 제거
+    buffsDisplay.innerHTML = '';
+    
+    // 시간 제한 버프들 표시
+    timeBuffs.forEach(buff => {
+      const remaining = Math.max(0, buff.endTime - now);
+      const seconds = Math.ceil(remaining / 1000);
+      
+      const buffDiv = document.createElement('div');
+      buffDiv.className = 'buff-item';
+      
+      let icon = '';
+      if (buff.type === BUFFS.EARLY_LEAVE) icon = '🏃';
+      else if (buff.type === BUFFS.MAGNET) icon = '🧲';
+      else if (buff.type === BUFFS.STOCK_BOOM) icon = '📈';
+      
+      buffDiv.innerHTML = `<span class="buff-icon">${icon}</span><span class="buff-time">${seconds}초</span>`;
+      buffsDisplay.appendChild(buffDiv);
+    });
   }
   
   function updateHearts() {
@@ -798,12 +875,21 @@
     }
   }
 
-  function showOverlay(t, s, btn) {
+  function showOverlay(t, s, btn, isGameOver = false) {
     if (UISystem?.showOverlay) {
-      UISystem.showOverlay(overlay, ovTitle, ovSub, btnStart, t, s, btn);
+      UISystem.showOverlay(overlay, ovTitle, ovSub, btnStart, t, s, btn, isGameOver);
     } else {
     ovTitle.textContent = t;
-    ovSub.textContent = s;
+    if (isGameOver && ovStats) {
+      // 게임 오버일 때는 통계를 별도 요소로 표시
+      ovSub.hidden = true;
+      ovStats.hidden = false;
+    } else {
+      // 일반 오버레이일 때는 기존 방식 사용
+      ovSub.hidden = false;
+      ovSub.textContent = s;
+      if (ovStats) ovStats.hidden = true;
+    }
     btnStart.textContent = btn || "CONTINUE";
       overlay.hidden = false;
     overlay.style.display = "grid";
@@ -884,6 +970,41 @@
       // 디버프 업데이트
       if (!isFeverTime()) updateDebuff();
       
+      // 버프 업데이트
+      if (BuffSystem?.updateBuffs) {
+        BuffSystem.updateBuffs(dt * 1000); // 밀리초로 변환 (실제로는 사용하지 않지만 호환성을 위해)
+      }
+      
+      // 자석 버프: +아이템만 자동 수집 처리
+      if (BuffSystem && BuffSystem.hasBuff(BUFFS.MAGNET)) {
+        const agent = getAgent();
+        if (agent) {
+          const magnetRange = 100; // 100px 범위 (더 좁힘)
+          const currentDrops = getDrops();
+          for (let i = currentDrops.length - 1; i >= 0; i--) {
+            const d = currentDrops[i];
+            if (!d || !d.alive) continue;
+            
+            // - 아이템(세금/빚)은 자석으로 끌어오지 않음
+            if (d.type === ITEM.TAX || d.type === ITEM.DEBT) continue;
+            
+            // 캐릭터와의 거리 계산
+            const dx = d.x - agent.x;
+            const dy = d.y - agent.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // 범위 내에 있으면 자동 수집 (135px 범위)
+            if (distance <= magnetRange + d.r) {
+              d.alive = false;
+              const itemColor = COLOR[d.type] || "#999";
+              spawnParticles(d.x, d.y, itemColor, 8);
+              collect(d.type);
+              currentDrops.splice(i, 1);
+            }
+          }
+        }
+      }
+      
       // 회의 소환 디버프 처리
       if (hasDebuff(DEBUFFS.MEETING_CALL)) {
         const meetingNow = performance.now();
@@ -941,6 +1062,30 @@
         if (ItemSystem) ItemSystem.nextSpawnAt = ts + spawnInterval;
       }
 
+      // 미국 주식 떡상 버프: 빠른 수표 스폰
+      if (BuffSystem && BuffSystem.stockBoomActive && ts >= BuffSystem.stockBoomNextSpawn) {
+        const ITEM = window.Game?.ITEM || {};
+        const margin = 16;
+        const gridSize = (world.w - margin * 2) / 4;
+        const gridIndex = Math.floor(Math.random() * 4);
+        const x = margin + gridIndex * gridSize + gridSize / 2;
+        const y = -20;
+        const r = 18;
+        const vy = 0.08 + Math.random() * 0.06;
+        
+        // 10만원 수표 스폰 (cash10000 사용)
+        if (ItemSystem && ItemSystem.drops) {
+          ItemSystem.drops.push({ 
+            x, y, r, vy, 
+            type: ITEM.CASH10000, 
+            alive: true,
+            stockBoomItem: true // 미국 주식 떡상 아이템 표시
+          });
+        }
+        
+        BuffSystem.stockBoomNextSpawn = ts + 500; // 0.5초마다 스폰 (렉 방지)
+      }
+
       // 아이템 물리 업데이트
       if (ItemSystem?.updatePhysics) {
         ItemSystem.updatePhysics(dt, world, LV[levelIndex], DebuffSystem);
@@ -966,7 +1111,10 @@
         
       if (d.y - d.r > world.h) {
         d.alive = false;
-          if (d.type !== ITEM.TAX && d.type !== ITEM.DEBT) {
+          // 미국 주식 떡상 아이템은 놓쳐도 생명/콤보 감소 없음
+          if (d.stockBoomItem) {
+            // 아무것도 하지 않음
+          } else if (d.type !== ITEM.TAX && d.type !== ITEM.DEBT) {
             loseHeart();
             if (ComboSystem?.comboCount > 0) resetCombo();
           } else if (d.type === ITEM.DEBT) {
@@ -1001,9 +1149,11 @@
         particles: getParticles(),
         AgentSystem,
         DebuffSystem,
+        BuffSystem,
         ComboSystem,
         hasDebuff,
         DEBUFFS,
+        BUFFS,
       });
     } else {
       // Fallback 렌더링
@@ -1127,6 +1277,8 @@
       lockedScore = 0;
     }
     
+    if (BuffSystem?.init) BuffSystem.init();
+    
     if (UISystem?.init) UISystem.init();
     
     elDebuffText.textContent = "대기 중";
@@ -1202,12 +1354,14 @@
     // BGM 정지
     playBGM(false);
     
+    let isNewRecord = false;
     if (score > highScore) {
       highScore = score;
       localStorage.setItem("mc.highscore", String(highScore));
       elHi.textContent = `₩${highScore.toLocaleString('ko-KR')}`;
       btnReport.hidden = false;
-      popBanner("신기록! 🎉");
+      isNewRecord = true;
+      // 팝업 배너 제거, 오버레이에만 표시
     }
     
     // 통계 계산
@@ -1217,29 +1371,87 @@
     const endingMessage = getEndingMessage(score);
     const grade = getGrade(score);
     
-    // 통계 대시보드 텍스트 생성
-    const statsText = `📊 플레이 결과
-
-━━━━━━━━━━━━━━━━━━
-
-💰 획득 총액: ₩${score.toLocaleString('ko-KR')}
-
-🛡️ 피한 빚: ₩${totalDebtAvoided.toLocaleString('ko-KR')}
-
-🔥 최고 콤보: ${finalMaxCombo}
-
-⏱️ 생존 시간: ${formatTime(survivalTime)}
-
-📈 경제력 등급: ${grade}
-
-━━━━━━━━━━━━━━━━━━
-
-${endingMessage}`;
+    // 통계를 별도 요소로 생성
+    if (ovStats) {
+      ovStats.innerHTML = ''; // 기존 내용 초기화
+      
+      // 제목
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'stat-item';
+      titleDiv.style.textAlign = 'center';
+      titleDiv.style.fontWeight = 'bold';
+      titleDiv.style.fontSize = 'clamp(13px, 3.2vw, 17px)';
+      titleDiv.textContent = '📊 플레이 결과';
+      ovStats.appendChild(titleDiv);
+      
+      // 신기록 표시 (오버레이에만)
+      if (isNewRecord) {
+        const newRecordDiv = document.createElement('div');
+        newRecordDiv.className = 'stat-item';
+        newRecordDiv.style.textAlign = 'center';
+        newRecordDiv.style.fontWeight = 'bold';
+        newRecordDiv.style.color = '#FFD700';
+        newRecordDiv.style.fontSize = 'clamp(14px, 3.5vw, 18px)';
+        newRecordDiv.textContent = '🎉 신기록 달성! 🎉';
+        ovStats.appendChild(newRecordDiv);
+        
+        const divider0 = document.createElement('div');
+        divider0.className = 'stat-divider';
+        ovStats.appendChild(divider0);
+      }
+      
+      // 구분선
+      const divider1 = document.createElement('div');
+      divider1.className = 'stat-divider';
+      ovStats.appendChild(divider1);
+      
+      // 획득 총액
+      const scoreDiv = document.createElement('div');
+      scoreDiv.className = 'stat-item';
+      scoreDiv.textContent = `💰 획득 총액: ₩${score.toLocaleString('ko-KR')}`;
+      ovStats.appendChild(scoreDiv);
+      
+      // 피한 빚
+      const debtDiv = document.createElement('div');
+      debtDiv.className = 'stat-item';
+      debtDiv.textContent = `🛡️ 피한 빚: ₩${totalDebtAvoided.toLocaleString('ko-KR')}`;
+      ovStats.appendChild(debtDiv);
+      
+      // 최고 콤보
+      const comboDiv = document.createElement('div');
+      comboDiv.className = 'stat-item';
+      comboDiv.textContent = `🔥 최고 콤보: ${finalMaxCombo}`;
+      ovStats.appendChild(comboDiv);
+      
+      // 생존 시간
+      const timeDiv = document.createElement('div');
+      timeDiv.className = 'stat-item';
+      timeDiv.textContent = `⏱️ 생존 시간: ${formatTime(survivalTime)}`;
+      ovStats.appendChild(timeDiv);
+      
+      // 경제력 등급
+      const gradeDiv = document.createElement('div');
+      gradeDiv.className = 'stat-item';
+      gradeDiv.textContent = `📈 경제력 등급: ${grade}`;
+      ovStats.appendChild(gradeDiv);
+      
+      // 구분선
+      const divider2 = document.createElement('div');
+      divider2.className = 'stat-divider';
+      ovStats.appendChild(divider2);
+      
+      // 엔딩 메시지
+      const endingDiv = document.createElement('div');
+      endingDiv.className = 'stat-item ending-message';
+      endingDiv.textContent = endingMessage;
+      ovStats.appendChild(endingDiv);
+    }
     
     showOverlay(
       `GAME OVER - ${grade}등급`,
-      statsText,
-      "다시 시작"
+      '',
+      "다시 시작",
+      true // 게임 오버 플래그
     );
   }
 
@@ -1309,6 +1521,198 @@ ${endingMessage}`;
     startGame();
   });
   
+  // ============================================
+  // 튜토리얼 페이지 관리
+  // ============================================
+  let tutorialCurrentPage = 0;
+  let tutorialTotalPages = 3; // 동적으로 계산됨
+  const DEBUFFS_PER_PAGE = 5; // 페이지당 디버프 개수
+  
+  function initTutorialPages() {
+    const tutorialPagesContainer = tutorialOverlay?.querySelector('.tutorial-pages');
+    if (!tutorialPagesContainer) return;
+    
+    // 기존 디버프 페이지들 제거 (data-page가 숫자인 것들)
+    const existingDebuffPages = tutorialPagesContainer.querySelectorAll('.tutorial-page[data-page]:not([data-page="0"]):not([data-page="buff"])');
+    existingDebuffPages.forEach(page => page.remove());
+    
+    // 디버프 정보를 페이지별로 나누기
+    if (DEBUFF_INFO) {
+      const debuffTypes = Object.keys(DEBUFF_INFO);
+      const debuffPages = [];
+      
+      // 5개씩 나누기
+      for (let i = 0; i < debuffTypes.length; i += DEBUFFS_PER_PAGE) {
+        const pageDebuffs = debuffTypes.slice(i, i + DEBUFFS_PER_PAGE);
+        debuffPages.push(pageDebuffs);
+      }
+      
+      // 디버프 페이지들 생성
+      debuffPages.forEach((pageDebuffs, pageIndex) => {
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'tutorial-page';
+        pageDiv.setAttribute('data-page', String(pageIndex + 1)); // 페이지 번호는 1부터 시작
+        
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'tutorial-content';
+        
+        const titleP = document.createElement('p');
+        titleP.innerHTML = '<strong>디버프 항목:</strong>';
+        contentDiv.appendChild(titleP);
+        
+        const listDiv = document.createElement('div');
+        listDiv.className = 'tutorial-list';
+        
+        pageDebuffs.forEach(debuffType => {
+          const debuffInfo = DEBUFF_INFO[debuffType];
+          if (debuffInfo) {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'tutorial-item';
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'item-name';
+            nameSpan.textContent = debuffInfo.name;
+            const descSpan = document.createElement('span');
+            descSpan.className = 'item-desc';
+            descSpan.textContent = debuffInfo.desc;
+            itemDiv.appendChild(nameSpan);
+            itemDiv.appendChild(descSpan);
+            listDiv.appendChild(itemDiv);
+          }
+        });
+        
+        contentDiv.appendChild(listDiv);
+        pageDiv.appendChild(contentDiv);
+        
+        // 버프 페이지 앞에 삽입
+        const buffPage = tutorialPagesContainer.querySelector('.tutorial-page[data-page="buff"]');
+        if (buffPage) {
+          tutorialPagesContainer.insertBefore(pageDiv, buffPage);
+        } else {
+          tutorialPagesContainer.appendChild(pageDiv);
+        }
+      });
+      
+      // 총 페이지 수 업데이트 (기본 룰 1개 + 디버프 페이지들 + 버프 1개)
+      tutorialTotalPages = 1 + debuffPages.length + 1;
+    }
+    
+    // 버프 정보 표시
+    if (tutorialBuffs) {
+      tutorialBuffs.innerHTML = '';
+      
+      // FEVER 타임
+      const feverDiv = document.createElement('div');
+      feverDiv.className = 'tutorial-item';
+      const feverName = document.createElement('span');
+      feverName.className = 'item-name';
+      feverName.textContent = '🔥 FEVER 타임';
+      const feverDesc = document.createElement('span');
+      feverDesc.className = 'item-desc';
+      feverDesc.textContent = '25, 50, 75, 100 콤보 달성 시 발동. 모든 디버프 해제, 세금/빚 차감 무시, 현금 획득 2배';
+      feverDiv.appendChild(feverName);
+      feverDiv.appendChild(feverDesc);
+      tutorialBuffs.appendChild(feverDiv);
+      
+      // 콤보 배수 (combo.js의 getComboMultiplier 반영)
+      const comboDiv = document.createElement('div');
+      comboDiv.className = 'tutorial-item';
+      const comboName = document.createElement('span');
+      comboName.className = 'item-name';
+      comboName.textContent = '⚡ 콤보 배수';
+      const comboDesc = document.createElement('span');
+      comboDesc.className = 'item-desc';
+      comboDesc.textContent = '25+ 콤보: 1.25배, 50+ 콤보: 1.5배, 75+ 콤보: 1.75배, 100+ 콤보: 2.0배 (MAX COMBO!!!)';
+      comboDiv.appendChild(comboName);
+      comboDiv.appendChild(comboDesc);
+      tutorialBuffs.appendChild(comboDiv);
+      
+      // 조기퇴근 버프
+      const earlyLeaveDiv = document.createElement('div');
+      earlyLeaveDiv.className = 'tutorial-item';
+      const earlyLeaveName = document.createElement('span');
+      earlyLeaveName.className = 'item-name';
+      earlyLeaveName.textContent = '🏃 조기퇴근';
+      const earlyLeaveDesc = document.createElement('span');
+      earlyLeaveDesc.className = 'item-desc';
+      earlyLeaveDesc.textContent = '생명력 회복 (최대 5개). 생명력이 최대일 경우 보너스 목숨 +1';
+      earlyLeaveDiv.appendChild(earlyLeaveName);
+      earlyLeaveDiv.appendChild(earlyLeaveDesc);
+      tutorialBuffs.appendChild(earlyLeaveDiv);
+      
+      // 자석 버프
+      const magnetDiv = document.createElement('div');
+      magnetDiv.className = 'tutorial-item';
+      const magnetName = document.createElement('span');
+      magnetName.className = 'item-name';
+      magnetName.textContent = '🧲 자석';
+      const magnetDesc = document.createElement('span');
+      magnetDesc.className = 'item-desc';
+      magnetDesc.textContent = '5초간 캐릭터 주변 100px 범위 내 +아이템 자동 수집';
+      magnetDiv.appendChild(magnetName);
+      magnetDiv.appendChild(magnetDesc);
+      tutorialBuffs.appendChild(magnetDiv);
+      
+      // 미국 주식 떡상 버프
+      const stockBoomDiv = document.createElement('div');
+      stockBoomDiv.className = 'tutorial-item';
+      const stockBoomName = document.createElement('span');
+      stockBoomName.className = 'item-name';
+      stockBoomName.textContent = '📈 미국 주식 떡상';
+      const stockBoomDesc = document.createElement('span');
+      stockBoomDesc.className = 'item-desc';
+      stockBoomDesc.textContent = '3.5초간 모든 화폐 가치가 골든바(50000원)로 변경, 세금/빚 아이템 제거';
+      stockBoomDiv.appendChild(stockBoomName);
+      stockBoomDiv.appendChild(stockBoomDesc);
+      tutorialBuffs.appendChild(stockBoomDiv);
+    }
+    
+    // 첫 페이지로 리셋
+    tutorialCurrentPage = 0;
+    updateTutorialPage();
+  }
+  
+  function updateTutorialPage() {
+    // 모든 페이지 숨기기
+    const pages = tutorialOverlay?.querySelectorAll('.tutorial-page');
+    if (pages) {
+      pages.forEach((page, index) => {
+        if (index === tutorialCurrentPage) {
+          page.classList.add('active');
+        } else {
+          page.classList.remove('active');
+        }
+      });
+    }
+    
+    // 총 페이지 수 다시 계산 (디버프 페이지 수가 변경되었을 수 있음)
+    const allPages = tutorialOverlay?.querySelectorAll('.tutorial-page');
+    if (allPages) {
+      tutorialTotalPages = allPages.length;
+    }
+    
+    // 페이지 인디케이터 업데이트
+    if (tutorialPageIndicator) {
+      tutorialPageIndicator.textContent = `${tutorialCurrentPage + 1} / ${tutorialTotalPages}`;
+    }
+    
+    // 이전/다음 버튼 상태 업데이트
+    if (btnTutorialPrev) {
+      btnTutorialPrev.disabled = tutorialCurrentPage === 0;
+      btnTutorialPrev.style.opacity = tutorialCurrentPage === 0 ? '0.5' : '1';
+    }
+    if (btnTutorialNext) {
+      btnTutorialNext.disabled = tutorialCurrentPage === tutorialTotalPages - 1;
+      btnTutorialNext.style.opacity = tutorialCurrentPage === tutorialTotalPages - 1 ? '0.5' : '1';
+    }
+  }
+  
+  function goToTutorialPage(page) {
+    if (page >= 0 && page < tutorialTotalPages) {
+      tutorialCurrentPage = page;
+      updateTutorialPage();
+    }
+  }
+  
   btnTutorial.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1316,16 +1720,40 @@ ${endingMessage}`;
     overlay.style.display = "none";
     tutorialOverlay.hidden = false;
     tutorialOverlay.style.display = "grid";
+    initTutorialPages();
   });
   
   btnCloseTutorial.addEventListener("click", (e) => {
-        e.preventDefault();
+    e.preventDefault();
     e.stopPropagation();
     tutorialOverlay.hidden = true;
     tutorialOverlay.style.display = "none";
     overlay.hidden = false;
     overlay.style.display = "grid";
+    // 페이지 리셋
+    tutorialCurrentPage = 0;
+    updateTutorialPage();
   });
+  
+  if (btnTutorialPrev) {
+    btnTutorialPrev.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (tutorialCurrentPage > 0) {
+        goToTutorialPage(tutorialCurrentPage - 1);
+      }
+    });
+  }
+  
+  if (btnTutorialNext) {
+    btnTutorialNext.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (tutorialCurrentPage < tutorialTotalPages - 1) {
+        goToTutorialPage(tutorialCurrentPage + 1);
+      }
+    });
+  }
   
   btnPause.addEventListener("click", () => {
     if (gameOver) return;

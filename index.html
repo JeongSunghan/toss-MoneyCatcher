@@ -56,6 +56,9 @@
           <span id="hearts-count" class="hearts-count">×5</span>
         </div>
 
+        <!-- 버프 표시 (게임 내부) -->
+        <div id="buffs-display" class="buffs-display"></div>
+
         <!-- 배너 -->
         <div id="banner" class="banner" hidden></div>
       </div>
@@ -122,7 +125,8 @@
     <div id="overlay" class="overlay" hidden>
       <div class="panel">
         <h2 id="ov-title">머니 캐쳐</h2>
-        <p id="ov-sub">좌,우 스와이프 또는 방향키로 요원을 이동하세요.</p>
+        <div id="ov-sub">좌,우 스와이프 또는 방향키로 요원을 이동하세요.</div>
+        <div id="ov-stats" class="game-stats" hidden></div>
         <div class="row">
           <button id="btn-start" class="primary">GAME START</button>
         </div>
@@ -137,27 +141,51 @@
     <div id="tutorial-overlay" class="overlay" hidden>
       <div class="panel tutorial-panel">
         <h2>튜토리얼</h2>
-        <div class="tutorial-content">
-          <p><strong>게임 방법:</strong></p>
-          <ul>
-            <li>좌우 스와이프 또는 방향키로 요원을 이동하세요</li>
-            <li>떨어지는 아까운 돈을 받으세요</li>
-            <li>세금(TAX), 빚(DEBT)은 피하세요</li>
-            <li>돈을 연속으로 받으면 콤보가 쌓입니다</li>
-            <li>콤보가 높을수록 점수 배수가 증가합니다</li>
-            <li>돈을 놓치면 생명이 감소합니다 (최대 5개) </li>
-          </ul>
-          <p><strong>콤보 배수:</strong></p>
-          <ul>
-            <li>10+ 콤보: 0.25배</li>
-            <li>20+ 콤보: 0.5배</li>
-            <li>30+ 콤보: 0.75배</li>
-            <li>40+ 콤보: 1.25배</li>
-            <li>50+ 콤보: 1.5배 (MAX COMBO!!!)</li>
-          </ul>
+        
+        <!-- 페이지 인디케이터 -->
+        <div class="tutorial-pages">
+          <div class="tutorial-page active" data-page="0">
+            <div class="tutorial-content">
+              <p><strong>게임 방법:</strong></p>
+              <ul>
+                <li>좌우 스와이프 또는 방향키로 요원을 이동하세요</li>
+                <li>떨어지는 아까운 돈을 받으세요</li>
+                <li>세금(TAX), 빚(DEBT)은 피하세요</li>
+                <li>돈을 연속으로 받으면 콤보가 쌓입니다</li>
+                <li>콤보가 높을수록 점수 배수가 증가합니다</li>
+                <li>돈을 놓치면 생명이 감소합니다 (최대 5개)</li>
+              </ul>
+              <p><strong>콤보 배수:</strong></p>
+              <ul>
+                <li>25+ 콤보: 1.25배</li>
+                <li>50+ 콤보: 1.5배</li>
+                <li>75+ 콤보: 1.75배</li>
+                <li>100+ 콤보: 2.0배 (MAX COMBO!!!)</li>
+              </ul>
+              <p><strong>버프 항목은 별도 페이지에서 확인하세요</strong></p>
+            </div>
+          </div>
+          
+          <!-- 디버프 페이지들은 JavaScript에서 동적으로 생성됩니다 -->
+          
+          <div class="tutorial-page" data-page="buff">
+            <div class="tutorial-content">
+              <p><strong>버프 항목:</strong></p>
+              <div id="tutorial-buffs" class="tutorial-list"></div>
+            </div>
+          </div>
         </div>
-        <div class="row">
-          <button id="btn-close-tutorial" class="primary">닫기</button>
+        
+        <!-- 페이지네이션 컨트롤 -->
+        <div class="tutorial-controls">
+          <div class="tutorial-nav">
+            <button id="btn-tutorial-prev" class="ghost sm">이전</button>
+            <span id="tutorial-page-indicator" class="tutorial-page-indicator">1 / 1</span>
+            <button id="btn-tutorial-next" class="ghost sm">다음</button>
+          </div>
+          <div class="row">
+            <button id="btn-close-tutorial" class="primary">닫기</button>
+          </div>
         </div>
       </div>
     </div>
@@ -174,6 +202,7 @@
   <!-- 모듈 스크립트  -->
   <script src="js/config.js"></script>
   <script src="js/debuffs.js"></script>
+  <script src="js/buffs.js"></script>
   <script src="js/items.js"></script>
   <script src="js/combo.js"></script>
   <script src="js/agent.js"></script>

@@ -254,11 +254,22 @@
      * 오버레이 표시
      * 게임 오버, 일시정지 등의 오버레이를 표시합니다.
      */
-    showOverlay(overlay, ovTitle, ovSub, btnStart, title, subtitle, buttonText) {
+    showOverlay(overlay, ovTitle, ovSub, btnStart, title, subtitle, buttonText, isGameOver = false) {
       if (!overlay || !ovTitle || !ovSub || !btnStart) return;
       
       ovTitle.textContent = title;
-      ovSub.textContent = subtitle;
+      
+      // 게임 오버일 때는 통계 컨테이너를 사용 (game.js에서 이미 설정됨)
+      const ovStats = document.getElementById("ov-stats");
+      if (isGameOver && ovStats) {
+        ovSub.hidden = true;
+        ovStats.hidden = false;
+      } else {
+        ovSub.hidden = false;
+        ovSub.textContent = subtitle;
+        if (ovStats) ovStats.hidden = true;
+      }
+      
       btnStart.textContent = buttonText || "CONTINUE";
       overlay.hidden = false;
       overlay.style.display = "grid";

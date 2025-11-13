@@ -33,12 +33,10 @@
      * @returns {number} 점수 배수
      */
     getComboMultiplier(combo) {
-      if (combo >= 100) return 4.0;  // MAX COMBO
-      if (combo >= 75) return 3.0;
-      if (combo >= 50) return 2.5;
-      if (combo >= 25) return 2.0;
-      if (combo >= 10) return 1.5;
-      if (combo >= 5) return 1.2;
+      if (combo >= 100) return 2.0;  // MAX COMBO
+      if (combo >= 75) return 1.75;
+      if (combo >= 50) return 1.5;
+      if (combo >= 25) return 1.25;
       return 1.0;
     },
 

@@ -24,7 +24,7 @@
     PANIC_SELL: "panic_sell",            // 아이템 낙하 속도 2배
     SALARY_FREEZE: "salary_freeze",      // 연봉동결: 모든 금액이 10000원으로 변경
     FOMO_SYNDROME: "fomo_syndrome",      // - 아이템이 +로 위장
-    SAVING_OBSESSION: "saving_obsession", // 획득 점수 30% 감소
+    SAVING_OBSESSION: "saving_obsession", // 획득 금액 30% 감소
     REAL_ESTATE_BOOM: "real_estate_boom",     // 화면 하단 30% 가려짐
     SUBSCRIPTION_BOMB: "subscription_bomb",    // 2초마다 구독료 차감
   };
@@ -42,9 +42,9 @@
     [Game.DEBUFFS.MEETING_CALL]: { duration: 12000, name: "📞 회의 소환", desc: "3초마다 0.5초 정지" },
     [Game.DEBUFFS.COFFEE_SHORTAGE]: { duration: 10000, name: "☕ 커피 부족", desc: "이동 속도 30% 감소" },
     [Game.DEBUFFS.PANIC_SELL]: { duration: 8000, name: "😱 패닉셀", desc: "낙하 속도 2배" },
-    [Game.DEBUFFS.SALARY_FREEZE]: { duration: 10000, name: "❄️ 연봉동결", desc: "모든 금액이 10000원으로 변경" },
+    [Game.DEBUFFS.SALARY_FREEZE]: { duration: 10000, name: "❄️ 연봉동결", desc: "금액 증가 X (차감은 그대로)" },
     [Game.DEBUFFS.FOMO_SYNDROME]: { duration: 12000, name: "🤯 FOMO 증후군", desc: "- 아이템이 +로 위장" },
-    [Game.DEBUFFS.SAVING_OBSESSION]: { duration: 20000, name: "🔒 저축 강박", desc: "획득 점수 30% 잠금" },
+    [Game.DEBUFFS.SAVING_OBSESSION]: { duration: 20000, name: "🔒 저축 강박", desc: "획득 금액 30% 감소" },
     [Game.DEBUFFS.REAL_ESTATE_BOOM]: { duration: 15000, name: "🏠 부동산 폭등", desc: "화면 하단 30% 가려짐" },
     [Game.DEBUFFS.SUBSCRIPTION_BOMB]: { duration: 12000, name: "💳 구독료 폭탄", desc: "2초마다 -1000원" },
   };

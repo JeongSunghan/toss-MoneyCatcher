@@ -42,45 +42,88 @@
     spawnOne(world, config, debuffSystem, currentLevel = 1) {
       const ITEM = window.Game?.ITEM || {};
       const getWeightsByLevel = window.Game?.config?.getWeightsByLevel;
+      const BuffSystem = window.Game?.BuffSystem;
       
-      // 레벨별 가중치 가져오기
-      let weights = getWeightsByLevel ? getWeightsByLevel(currentLevel) : [];
-      
-      // 디버프 적용
-      weights = [...weights];
-      
-      // 세금 폭탄: 세금/빚 출현 빈도 증가
-      if (debuffSystem && debuffSystem.hasDebuff && debuffSystem.hasDebuff(window.Game?.DEBUFFS?.TAX_BOMB)) {
-        weights = weights.map(([type, weight]) => {
-          if (type === ITEM.TAX || type === ITEM.DEBT) {
-            return [type, weight * 2.5]; // 2.5배 증가
-          }
-          return [type, weight];
-        });
+      // 레벨 3부터 버프 아이템 등장 가능
+      let type;
+      if (currentLevel >= 3 && Math.random() < 0.1) {
+        // 버프 아이템 10% 확률
+        const buffWeights = [
+          [ITEM.BUFF_GOLDEN_TIME, 50],    // 골든타임: 50%
+          [ITEM.BUFF_MAGNET, 45],         // 자석: 45%
+          [ITEM.BUFF_STOCK_BOOM, 5],      // 미국 주식 떡상: 5% (버프 아이템 중 5%)
+        ];
+        type = this.rndWeighted(buffWeights);
+      } else {
+        // 일반 아이템 90%
+        // 레벨별 가중치 가져오기
+        let weights = getWeightsByLevel ? getWeightsByLevel(currentLevel) : [];
+        
+        // 디버프 적용
+        weights = [...weights];
+        
+        // 세금 폭탄: 세금/빚 출현 빈도 증가
+        if (debuffSystem && debuffSystem.hasDebuff && debuffSystem.hasDebuff(window.Game?.DEBUFFS?.TAX_BOMB)) {
+          weights = weights.map(([type, weight]) => {
+            if (type === ITEM.TAX || type === ITEM.DEBT) {
+              return [type, weight * 2.5]; // 2.5배 증가
+            }
+            return [type, weight];
+          });
+        }
+        
+        // 유동성 위기: + 아이템 출현 빈도 50% 감소
+        if (debuffSystem && debuffSystem.hasDebuff && debuffSystem.hasDebuff(window.Game?.DEBUFFS?.LIQUIDITY_CRISIS)) {
+          weights = weights.map(([type, weight]) => {
+            // 현금 아이템들 (모든 현금 타입)
+            if (type === ITEM.CASH10 || type === ITEM.CASH50 || type === ITEM.CASH100 || 
+                type === ITEM.CASH500 || type === ITEM.CASH1000 || type === ITEM.CASH5000 || 
+                type === ITEM.CASH10000 || type === ITEM.CASH50000) {
+              return [type, weight * 0.5]; // 50% 감소
+            }
+            return [type, weight];
+          });
+        }
+        
+        // 미국 주식 떡상 활성화 중: 세금/빚 아이템 제거
+        if (BuffSystem && BuffSystem.stockBoomActive) {
+          weights = weights.filter(([type]) => type !== ITEM.TAX && type !== ITEM.DEBT);
+        }
+        
+        type = this.rndWeighted(weights);
       }
-      
-      // 유동성 위기: + 아이템 출현 빈도 50% 감소
-      if (debuffSystem && debuffSystem.hasDebuff && debuffSystem.hasDebuff(window.Game?.DEBUFFS?.LIQUIDITY_CRISIS)) {
-        weights = weights.map(([type, weight]) => {
-          // 현금 아이템들 (모든 현금 타입)
-          if (type === ITEM.CASH10 || type === ITEM.CASH50 || type === ITEM.CASH100 || 
-              type === ITEM.CASH500 || type === ITEM.CASH1000 || type === ITEM.CASH5000 || 
-              type === ITEM.CASH10000 || type === ITEM.CASH50000) {
-            return [type, weight * 0.5]; // 50% 감소
-          }
-          return [type, weight];
-        });
-      }
-      
-      const type = this.rndWeighted(weights);
       const margin = 16;
       
-      // 4칸 그리드 시스템: 화면을 4등분하여 각 칸의 중앙에 스폰
-      const gridSize = (world.w - margin * 2) / 4;
-      const gridIndex = Math.floor(Math.random() * 4); // 0~3 중 랜덤
-      const x = margin + gridIndex * gridSize + gridSize / 2;
+      let x, y;
       
-      const y = -20;  // 화면 상단 밖에서 시작
+      // 자석 아이템은 캐릭터 센터에 스폰 (135px 범위 내)
+      if (type === ITEM.BUFF_MAGNET) {
+        const AgentSystem = window.Game?.AgentSystem;
+        const agent = AgentSystem?.agent;
+        if (agent) {
+          // 캐릭터 센터 기준 135px 범위 내 랜덤 위치
+          const angle = Math.random() * Math.PI * 2;
+          const distance = Math.random() * 135;
+          x = agent.x + Math.cos(angle) * distance;
+          y = agent.y + Math.sin(angle) * distance;
+          // 화면 경계 체크
+          x = Math.max(margin, Math.min(world.w - margin, x));
+          y = Math.max(-20, Math.min(world.h + 20, y));
+        } else {
+          // 에이전트가 없으면 일반 스폰
+          const gridSize = (world.w - margin * 2) / 4;
+          const gridIndex = Math.floor(Math.random() * 4);
+          x = margin + gridIndex * gridSize + gridSize / 2;
+          y = -20;
+        }
+      } else {
+        // 일반 아이템: 4칸 그리드 시스템
+        const gridSize = (world.w - margin * 2) / 4;
+        const gridIndex = Math.floor(Math.random() * 4); // 0~3 중 랜덤
+        x = margin + gridIndex * gridSize + gridSize / 2;
+        y = -20;  // 화면 상단 밖에서 시작
+      }
+      
       const r = 18;   // 아이템 반지름
       const vy = 0.08 + Math.random() * 0.06; // 초기 낙하 속도
       
@@ -147,12 +190,20 @@
         }
         return Math.floor(base * scoreMultiplier);
       } else {
+        // 연봉동결 디버프: 획득 점수가 없어짐 (0원)
+        if (debuffSystem && debuffSystem.hasDebuff && debuffSystem.hasDebuff(DEBUFFS.SALARY_FREEZE)) {
+          return 0;
+        }
+        
         // 양수 아이템: 콤보 배수 적용 후 디버프 적용
         let baseScore = base * (comboMultiplier || 1.0);
         
-        // 연봉동결 디버프: 모든 금액을 10000원으로 변경
-        if (debuffSystem && debuffSystem.hasDebuff && debuffSystem.hasDebuff(DEBUFFS.SALARY_FREEZE)) {
-          baseScore = 10000;
+        // 미국 주식 떡상 버프: 모든 화폐 가치를 골든바(50000원)로 변경
+        const BuffSystem = window.Game?.BuffSystem;
+        const BUFFS = window.Game?.BUFFS || {};
+        if (BuffSystem && BuffSystem.hasBuff && BuffSystem.hasBuff(BUFFS.STOCK_BOOM)) {
+          // 모든 현금 아이템을 50000원으로 변경
+          baseScore = (SCORE[ITEM.CASH50000] || 50000) * (comboMultiplier || 1.0);
         }
         
         let scoreMultiplier = 1.0;

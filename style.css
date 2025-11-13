@@ -167,6 +167,43 @@ canvas {
   display: flex;
   align-items: center;
 }
+/* 버프 표시 (게임 내부) */
+.buffs-display {
+  position: absolute;
+  left: clamp(6px, 1.5vw, 10px);
+  top: clamp(50px, 12vw, 60px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 1vw, 6px);
+  z-index: 10;
+  max-width: 120px;
+}
+.buff-item {
+  background: rgba(255, 215, 0, 0.9);
+  border: clamp(1.5px, 0.6vw, 2px) solid #5C4632;
+  border-radius: clamp(4px, 1vw, 6px);
+  padding: clamp(4px, 1vw, 6px) clamp(6px, 1.5vw, 8px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  border-style: ridge;
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 1vw, 6px);
+  min-width: 80px;
+}
+.buff-icon {
+  font-size: clamp(14px, 3.5vw, 18px);
+  line-height: 1;
+}
+.buff-time {
+  font-size: clamp(9px, 2.2vw, 12px);
+  color: #000000;
+  text-shadow: 0.5px 0.5px 0px rgba(255, 255, 255, 0.5);
+  font-weight: bold;
+  font-family: "NeoDunggeunmo", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  line-height: 1;
+  white-space: nowrap;
+}
 .combo-label {
   font-size: clamp(8px, 2.5vw, 12px);
   color: #FFFFFF;
@@ -325,11 +362,11 @@ button[hidden] {
   margin: 10px;
 }
 .overlay .panel h2 {
-  margin: 0 0 clamp(8px, 2vw, 12px) 0;
-  font-size: clamp(16px, 4.2vw, 21px);
+  margin: 0 0 clamp(6px, 1.5vw, 8px) 0;
+  font-size: clamp(14px, 3.5vw, 18px);
   color: #FFFFFF;
   text-shadow: 2px 2px 0px #000000, 4px 4px 0px rgba(0, 0, 0, 0.3);
-  line-height: 1.4;
+  line-height: 1.3;
   word-break: keep-all;
 }
 .overlay .panel p {
@@ -338,6 +375,49 @@ button[hidden] {
   text-shadow: 1px 1px 0px #000000;
   line-height: 1.5;
   word-break: keep-all;
+}
+.overlay .panel #ov-sub {
+  font-size: clamp(12px, 3vw, 16px);
+  color: #FFE66D;
+  text-shadow: 1px 1px 0px #000000;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+.game-stats {
+  margin: clamp(12px, 3vw, 16px) 0;
+  text-align: left;
+}
+.game-stats .stat-item {
+  background: rgba(0, 0, 0, 0.2);
+  border: clamp(1px, 0.3vw, 2px) solid rgba(255, 255, 255, 0.1);
+  border-radius: clamp(4px, 1vw, 6px);
+  padding: clamp(8px, 2vw, 10px) clamp(12px, 3vw, 16px);
+  margin: clamp(6px, 1.5vw, 8px) 0;
+  font-size: clamp(11px, 2.8vw, 14px);
+  color: #FFFFFF;
+  text-shadow: 1px 1px 0px #000000;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+.game-stats .stat-item:first-child {
+  margin-top: 0;
+}
+.game-stats .stat-item:last-child {
+  margin-bottom: 0;
+}
+.game-stats .stat-divider {
+  height: clamp(1px, 0.3vw, 2px);
+  background: rgba(255, 255, 255, 0.2);
+  margin: clamp(8px, 2vw, 10px) 0;
+  border-radius: 1px;
+}
+.game-stats .ending-message {
+  background: rgba(255, 230, 109, 0.15);
+  border-color: rgba(255, 230, 109, 0.3);
+  color: #FFE66D;
+  font-weight: bold;
+  text-align: center;
+  margin-top: clamp(10px, 2.5vw, 12px);
 }
 .overlay .panel .row {
   margin-top: clamp(10px, 2.5vw, 12px);
@@ -522,25 +602,26 @@ button[hidden] {
 .tutorial-panel {
   max-width: 90%;
   max-height: 85vh;
-  overflow-y: auto;
+  overflow-y: hidden;
+  padding: clamp(16px, 4vw, 20px) !important;
 }
 .tutorial-content {
   text-align: left;
-  font-size: clamp(9px, 2.5vw, 12px);
+  font-size: clamp(8px, 2vw, 11px);
   color: #FFFFFF;
   text-shadow: 1px 1px 0px #000000;
-  line-height: 1.6;
-  margin: clamp(10px, 2.5vw, 12px) 0;
+  line-height: 1.4;
+  margin: clamp(6px, 1.5vw, 8px) 0;
 }
 .tutorial-content p {
-  margin: clamp(8px, 2vw, 10px) 0;
+  margin: clamp(5px, 1.2vw, 7px) 0;
 }
 .tutorial-content ul {
-  margin: clamp(6px, 1.5vw, 8px) 0;
-  padding-left: clamp(20px, 5vw, 24px);
+  margin: clamp(4px, 1vw, 6px) 0;
+  padding-left: clamp(16px, 4vw, 20px);
 }
 .tutorial-content li {
-  margin: clamp(4px, 1vw, 6px) 0;
+  margin: clamp(2px, 0.8vw, 4px) 0;
   word-break: keep-all;
 }
 .tutorial-content strong {
@@ -558,6 +639,92 @@ button[hidden] {
 .tutorial-content .debuff-list li {
   margin: clamp(3px, 0.8vw, 4px) 0;
   font-size: clamp(7px, 1.8vw, 9px);
+}
+.tutorial-pages {
+  position: relative;
+  min-height: 250px;
+  max-height: calc(85vh - 120px);
+  overflow: hidden;
+}
+.tutorial-page {
+  display: none;
+  animation: fadeIn 0.3s ease-in;
+}
+.tutorial-page.active {
+  display: block;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.tutorial-list {
+  max-height: calc(85vh - 200px);
+  overflow-y: hidden;
+  margin: clamp(5px, 1.2vw, 7px) 0;
+}
+.tutorial-list .tutorial-item {
+  background: rgba(0, 0, 0, 0.2);
+  border: clamp(1px, 0.3vw, 2px) solid rgba(255, 255, 255, 0.1);
+  border-radius: clamp(3px, 0.8vw, 5px);
+  padding: clamp(5px, 1.2vw, 7px) clamp(8px, 2vw, 12px);
+  margin: clamp(3px, 0.8vw, 5px) 0;
+  font-size: clamp(9px, 2.2vw, 12px);
+  color: #FFFFFF;
+  text-shadow: 1px 1px 0px #000000;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+.tutorial-list .tutorial-item:first-child {
+  margin-top: 0;
+}
+.tutorial-list .tutorial-item:last-child {
+  margin-bottom: 0;
+}
+.tutorial-list .tutorial-item .item-name {
+  font-weight: bold;
+  color: #FFE66D;
+  margin-bottom: clamp(2px, 0.6vw, 4px);
+  display: block;
+  font-size: clamp(10px, 2.4vw, 13px);
+}
+.tutorial-list .tutorial-item .item-desc {
+  color: #FFFFFF;
+  font-size: clamp(8px, 2vw, 11px);
+  line-height: 1.3;
+}
+.tutorial-controls {
+  margin-top: clamp(8px, 2vw, 10px);
+  border-top: clamp(1px, 0.3vw, 2px) solid rgba(255, 255, 255, 0.2);
+  padding-top: clamp(6px, 1.5vw, 8px);
+}
+.tutorial-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(6px, 1.5vw, 8px);
+  margin-bottom: clamp(6px, 1.5vw, 8px);
+}
+.tutorial-page-indicator {
+  font-size: clamp(11px, 2.8vw, 14px);
+  color: #FFE66D;
+  text-shadow: 1px 1px 0px #000000;
+  font-weight: bold;
+  flex: 1;
+  text-align: center;
+}
+.tutorial-nav button {
+  min-width: clamp(60px, 15vw, 80px);
+}
+.tutorial-nav button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 

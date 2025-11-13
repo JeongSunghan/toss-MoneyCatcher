@@ -98,6 +98,10 @@
       cash50000: "#FF6B6B",  // 빨간색
       tax: "#FF6B6B",       // 빨간색
       debt: "#8B6F47",      // 갈색
+      // 버프 아이템 색상
+      buff_golden_time: "#FFD700",    // 골든타임: 금색
+      buff_magnet: "#4ECDC4",         // 자석: 청록색
+      buff_stock_boom: "#FF1493",     // 미국 주식 떡상: 핑크
     },
     
     // 아이템별 표시 라벨
@@ -112,6 +116,10 @@
       cash50000: "50K",
       tax: "TAX",
       debt: "DEBT",
+      // 버프 아이템 라벨
+      buff_golden_time: "🏃",  // 조기퇴근
+      buff_magnet: "🧲",
+      buff_stock_boom: "📈",
     },
     
     // 레벨별 아이템 스폰 가중치 [타입, 가중치]
@@ -180,6 +188,10 @@
     CASH50000: "cash50000",
     TAX: "tax",
     DEBT: "debt",
+    // 버프 아이템
+    BUFF_GOLDEN_TIME: "buff_golden_time",      // 골든타임
+    BUFF_MAGNET: "buff_magnet",                // 자석
+    BUFF_STOCK_BOOM: "buff_stock_boom",        // 미국 주식 떡상
   };
   
   // ============================================
