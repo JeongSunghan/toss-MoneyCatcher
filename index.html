@@ -12,8 +12,18 @@
   <meta name="apple-mobile-web-app-title" content="머니 캐쳐" />
   <meta name="format-detection" content="telephone=no" />
   <meta name="msapplication-TileColor" content="#5C94FC" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  <!-- Neodgm 폰트 (네오둥근모) - 로컬 파일 사용 -->
+  <style>
+    @font-face {
+      font-family: 'NeoDunggeunmo';
+      src: url('assets/font/neodgm.woff2') format('woff2'),
+           url('assets/font/neodgm.woff') format('woff'),
+           url('assets/font/neodgm.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap; /* 폰트 로딩 최적화 */
+    }
+  </style>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -40,9 +50,9 @@
           <div id="combo-mult" class="combo-mult">×1</div>
         </div>
 
-        <!-- 하트 표시 (게임 내부) -->
+        <!-- 생명 표시 (게임 내부) -->
         <div id="hearts-display" class="hearts-display">
-          <span class="heart-icon">❤️</span>
+          <span class="life-label">LIFE</span>
           <span id="hearts-count" class="hearts-count">×5</span>
         </div>
 
@@ -57,7 +67,7 @@
         </div>
         <div class="sidebar-content">
           <div class="stat-card">
-            <div class="stat-label">점수</div>
+            <div class="stat-label">당신이 모은 돈</div>
             <div id="score" class="stat-value">0</div>
           </div>
           <div class="stat-card">
@@ -69,7 +79,7 @@
             <div id="level" class="stat-value">LV 1</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">최고 점수</div>
+            <div class="stat-label">최고 금액</div>
             <div id="hi" class="stat-value">0</div>
           </div>
           <div class="stat-card" id="debuff-card">

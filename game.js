@@ -505,7 +505,32 @@
   }
   
   function checkLevelUp() {
-    const newLevel = Math.min(MAX_LEVEL - 1, Math.floor(score / LEVEL_SCORE_INTERVAL));
+    // 레벨별 다른 간격을 적용하여 레벨 계산
+    const getLevelScoreInterval = window.Game?.config?.getLevelScoreInterval;
+    const calculateLevelFromScore = window.Game?.config?.calculateLevelFromScore;
+    
+    let newLevel;
+    if (calculateLevelFromScore) {
+      // 레벨별 간격을 적용한 계산 함수 사용
+      newLevel = calculateLevelFromScore(score);
+    } else if (getLevelScoreInterval) {
+      // 레벨별 간격 함수가 있으면 누적 점수로 계산
+      let currentScore = 0;
+      newLevel = 0;
+      for (let i = 1; i <= MAX_LEVEL; i++) {
+        const interval = getLevelScoreInterval(i);
+        currentScore += interval;
+        if (score >= currentScore) {
+          newLevel = i;
+        } else {
+          break;
+        }
+      }
+      newLevel = Math.min(MAX_LEVEL - 1, newLevel);
+    } else {
+      // 폴백: 기본 간격 사용
+      newLevel = Math.min(MAX_LEVEL - 1, Math.floor(score / LEVEL_SCORE_INTERVAL));
+    }
     if (newLevel > levelIndex) {
       const prevLevel = levelIndex;
       levelIndex = newLevel;

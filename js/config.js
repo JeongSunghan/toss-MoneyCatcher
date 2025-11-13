@@ -16,7 +16,58 @@
     WORLD_WIDTH: 360,        // 게임 월드 너비
     WORLD_HEIGHT: 520,       // 게임 월드 높이
     MAX_LEVEL: 10,           // 최대 레벨
-    LEVEL_SCORE_INTERVAL: 10000, // 레벨업에 필요한 금액 간격 (10000원마다 레벨업)
+    LEVEL_SCORE_INTERVAL: 15000, // 레벨업에 필요한 금액 간격 (기본값, 폴백용)
+    
+    /**
+     * 레벨별 레벨업 필요 금액 (누적 기준)
+     * 각 레벨에 도달하기 위해 필요한 누적 점수입니다.
+     */
+    LEVEL_SCORE_THRESHOLDS: [
+      0,           // 레벨 1: 0원 (시작)
+      25000,       // 레벨 2: 2.5만원
+      150000,      // 레벨 3: 15만원 (+10만원)
+      300000,      // 레벨 4: 30만원 (+15만원)
+      500000,      // 레벨 5: 50만원 (+20만원)
+      800000,      // 레벨 6: 80만원 (+30만원)
+      1200000,     // 레벨 7: 120만원 (+40만원)
+      1700000,     // 레벨 8: 170만원 (+50만원)
+      2400000,     // 레벨 9: 240만원 (+70만원)
+      3500000,     // 레벨 10: 350만원 (+110만원)
+    ],
+    
+    /**
+     * 현재 점수로부터 레벨 계산
+     * 누적 점수 기준으로 레벨을 계산합니다.
+     * @param {number} score - 현재 점수
+     * @returns {number} 레벨 (0-based, 최대 MAX_LEVEL - 1)
+     */
+    calculateLevelFromScore(score) {
+      // this 바인딩 문제를 피하기 위해 Game.config를 직접 참조
+      const config = window.Game?.config || this;
+      const thresholds = config.LEVEL_SCORE_THRESHOLDS;
+      const maxLevel = config.MAX_LEVEL;
+      
+      if (!thresholds || thresholds.length === 0) {
+        // 폴백: 기본 간격 사용
+        const interval = config.LEVEL_SCORE_INTERVAL || 15000;
+        return Math.min(maxLevel - 1, Math.floor(score / interval));
+      }
+      
+      let level = 0; // 0-based (레벨 1 = 0)
+      
+      // 레벨 1은 0원부터 시작하므로 항상 가능
+      // 각 레벨의 누적 점수 기준과 비교
+      for (let i = 1; i < thresholds.length; i++) {
+        if (score >= thresholds[i]) {
+          level = i; // 1-based (레벨 2 = 1, 레벨 3 = 2, ...)
+        } else {
+          break;
+        }
+      }
+      
+      // 0-based로 변환 (레벨 1 = index 0, 레벨 2 = index 1, ...)
+      return Math.min(maxLevel - 1, level);
+    },
     COMBO_DURATION: 3.0,      // 콤보 유지 시간 (초)
     FEVER_DURATION: 7.0,      // FEVER 타임 지속 시간 (초)
     MAX_HEARTS: 5,            // 최대 생명 수
