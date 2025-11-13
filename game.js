@@ -467,6 +467,20 @@
         BuffSystem.activateBuff(BUFFS.STOCK_BOOM, 3500); // 3.5초
         popBanner("📈 미국 주식 떡상! 수표 폭풍!", 2000);
         playSound("sfx-catch", 1.0);
+        
+        // 화면에 떨어지고 있는 모든 현금 아이템을 5만원으로 변경
+        const currentDrops = getDrops();
+        for (let i = 0; i < currentDrops.length; i++) {
+          const d = currentDrops[i];
+          if (d && d.alive) {
+            // 현금 아이템인 경우 (세금/빚 제외)
+            if (d.type !== ITEM.TAX && d.type !== ITEM.DEBT && 
+                d.type !== ITEM.BUFF_GOLDEN_TIME && d.type !== ITEM.BUFF_MAGNET && 
+                d.type !== ITEM.BUFF_STOCK_BOOM) {
+              d.type = ITEM.CASH50000; // 모든 현금을 5만원으로 변경
+            }
+          }
+        }
       }
       return;
     }
@@ -1073,11 +1087,11 @@
         const r = 18;
         const vy = 0.08 + Math.random() * 0.06;
         
-        // 10만원 수표 스폰 (cash10000 사용)
+        // 5만원 수표 스폰 (cash50000 사용)
         if (ItemSystem && ItemSystem.drops) {
           ItemSystem.drops.push({ 
             x, y, r, vy, 
-            type: ITEM.CASH10000, 
+            type: ITEM.CASH50000, 
             alive: true,
             stockBoomItem: true // 미국 주식 떡상 아이템 표시
           });

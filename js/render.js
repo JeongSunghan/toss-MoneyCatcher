@@ -232,21 +232,50 @@
     },
 
     /**
-     * 자석 버프 효과: 캐릭터 가운데 푸른 원형 범위
+     * 자석 버프 효과: 캐릭터 머리 위에 자석 아이콘 표시
      */
     drawMagnetRange(ctx, cvs, world, agent) {
       if (!agent) return;
-      const range = 100; // 범위를 100px로 축소
       
       ctx.save();
-      ctx.strokeStyle = "rgba(78, 205, 196, 0.5)";
-      ctx.lineWidth = 3;
-      ctx.setLineDash([5, 5]);
-      ctx.beginPath();
-      // 캐릭터 가운데에 항상 위치
-      ctx.arc(agent.x, agent.y, range, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      
+      // 월드 좌표를 화면 좌표로 변환 (agent.js의 drawAgentSprite와 동일한 방식)
+      const rect = cvs.getBoundingClientRect();
+      const displayWidth = rect.width;
+      const displayHeight = rect.height;
+      const s = world.scale;
+      const ox = (displayWidth - world.w * s) / 2;
+      const oy = (displayHeight - world.h * s) / 2;
+      
+      // 캐릭터의 화면 좌표 (agent.js의 drawAgentSprite와 동일)
+      const px = ox + agent.x * s;
+      const py = oy + agent.y * s;
+      
+      // 캐릭터 스프라이트의 실제 높이 (agent.js에서 scale 1.25 적용)
+      const agentSpriteHeight = (agent.h || 32) * s * 1.25;
+      const agentOffsetY = 8 * s; // agent.js에서 py - dh / 2 - 8 * s로 그려짐
+      
+      // 캐릭터 머리 위 위치 (머리에서 15px 떨어진 위치)
+      const iconY = py - agentSpriteHeight / 2 - agentOffsetY - 15 * s;
+      const iconX = px; // 캐릭터 중심 X 좌표
+      
+      // 펄스 효과를 위한 시간 기반 크기 조정
+      const time = performance.now() / 1000;
+      const pulseScale = 1.0 + Math.sin(time * 3) * 0.1; // 0.9 ~ 1.1 사이로 펄스
+      const fontSize = 24 * pulseScale * s; // 스케일 적용
+      
+      // 자석 이모지 그리기
+      ctx.font = `${fontSize}px Arial`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      
+      // 그림자 효과
+      ctx.shadowColor = "rgba(78, 205, 196, 0.5)";
+      ctx.shadowBlur = 8;
+      
+      // 자석 이모지
+      ctx.fillText("🧲", iconX, iconY);
+      
       ctx.restore();
     },
 

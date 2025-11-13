@@ -85,44 +85,30 @@
           });
         }
         
-        // 미국 주식 떡상 활성화 중: 세금/빚 아이템 제거
+        // 미국 주식 떡상 활성화 중: 세금/빚 아이템 제거, 모든 현금을 5만원으로 변경
         if (BuffSystem && BuffSystem.stockBoomActive) {
           weights = weights.filter(([type]) => type !== ITEM.TAX && type !== ITEM.DEBT);
+          // 모든 현금 아이템을 5만원으로 변경
+          weights = weights.map(([type, weight]) => {
+            // 현금 아이템인 경우 5만원으로 변경
+            if (type === ITEM.CASH10 || type === ITEM.CASH50 || type === ITEM.CASH100 || 
+                type === ITEM.CASH500 || type === ITEM.CASH1000 || type === ITEM.CASH5000 || 
+                type === ITEM.CASH10000 || type === ITEM.CASH50000) {
+              return [ITEM.CASH50000, weight];
+            }
+            return [type, weight];
+          });
         }
         
         type = this.rndWeighted(weights);
       }
       const margin = 16;
       
-      let x, y;
-      
-      // 자석 아이템은 캐릭터 센터에 스폰 (135px 범위 내)
-      if (type === ITEM.BUFF_MAGNET) {
-        const AgentSystem = window.Game?.AgentSystem;
-        const agent = AgentSystem?.agent;
-        if (agent) {
-          // 캐릭터 센터 기준 135px 범위 내 랜덤 위치
-          const angle = Math.random() * Math.PI * 2;
-          const distance = Math.random() * 135;
-          x = agent.x + Math.cos(angle) * distance;
-          y = agent.y + Math.sin(angle) * distance;
-          // 화면 경계 체크
-          x = Math.max(margin, Math.min(world.w - margin, x));
-          y = Math.max(-20, Math.min(world.h + 20, y));
-        } else {
-          // 에이전트가 없으면 일반 스폰
-          const gridSize = (world.w - margin * 2) / 4;
-          const gridIndex = Math.floor(Math.random() * 4);
-          x = margin + gridIndex * gridSize + gridSize / 2;
-          y = -20;
-        }
-      } else {
-        // 일반 아이템: 4칸 그리드 시스템
-        const gridSize = (world.w - margin * 2) / 4;
-        const gridIndex = Math.floor(Math.random() * 4); // 0~3 중 랜덤
-        x = margin + gridIndex * gridSize + gridSize / 2;
-        y = -20;  // 화면 상단 밖에서 시작
-      }
+      // 모든 아이템(버프 포함)은 상단에서 떨어지도록 4칸 그리드 시스템 사용
+      const gridSize = (world.w - margin * 2) / 4;
+      const gridIndex = Math.floor(Math.random() * 4); // 0~3 중 랜덤
+      const x = margin + gridIndex * gridSize + gridSize / 2;
+      const y = -20;  // 화면 상단 밖에서 시작
       
       const r = 18;   // 아이템 반지름
       const vy = 0.08 + Math.random() * 0.06; // 초기 낙하 속도
