@@ -30,18 +30,55 @@
 
 ```
 MoneyCatcher/
-├── index.html          # 메인 HTML 파일
-├── game.js            # 게임 로직
-├── style.css          # 스타일시트
-├── assets/            # 게임 에셋
-│   ├── agent_idle.png # 대기 애니메이션 (2프레임)
-│   ├── agent_run.png  # 달리기 애니메이션 (4프레임)
-│   ├── money.png      # 돈 아이템
-│   ├── point.png      # 포인트 아이템
-│   ├── coupon.png     # 쿠폰 아이템
-│   ├── tax.png        # 세금 아이템
-│   ├── debt.png       # 빚 아이템
-│   └── bg_night.png   # 배경 이미지
+├── index.html              # 메인 HTML 파일
+├── game.js                 # 게임 메인 로직
+├── style.css               # 스타일시트
+├── README.md               # 프로젝트 설명서
+├── moneyAssets.html        # 에셋 관리 페이지
+├── js/                     # 게임 모듈
+│   ├── config.js           # 게임 설정 및 상수
+│   ├── agent.js            # 캐릭터(요원) 시스템
+│   ├── input.js            # 입력 처리 시스템
+│   ├── items.js            # 아이템 시스템
+│   ├── combo.js            # 콤보 시스템
+│   ├── debuffs.js          # 디버프 시스템
+│   ├── buffs.js            # 버프 시스템
+│   ├── render.js           # 렌더링 시스템
+│   └── ui.js               # UI 업데이트 시스템
+└── assets/                 # 게임 에셋
+    ├── font/               # 폰트 파일
+    │   ├── neodgm.ttf
+    │   ├── neodgm.woff
+    │   └── neodgm.woff2
+    ├── money/              # 돈 아이템 이미지
+    │   ├── coin_10.png
+    │   ├── coin_50.png
+    │   ├── coin_100.png
+    │   ├── coin_500.png
+    │   ├── bill_1000.png
+    │   ├── bill_5000.png
+    │   ├── bill_10000.png
+    │   ├── bill_50000.png
+    │   ├── tax.png
+    │   └── debt.png
+    ├── pixel_heart/        # 하트 아이콘
+    │   ├── heart_V2.png
+    │   └── heart_V3.png
+    ├── sound/              # 사운드 파일
+    │   ├── background.mp3
+    │   ├── item_get.mp3
+    │   ├── minus_item.mp3
+    │   ├── combo_up.mp3
+    │   ├── level_up.mp3
+    │   └── lobby music.mp3
+    ├── bg_day.png          # 배경 이미지 (낮)
+    ├── bg_night.png        # 배경 이미지 (밤)
+    ├── money.png           # 돈 아이템 (레거시)
+    ├── point.png           # 포인트 아이템
+    ├── coupon.png          # 쿠폰 아이템
+    ├── tax.png             # 세금 아이템 (레거시)
+    ├── debt.png            # 빚 아이템 (레거시)
+    └── ui_panel.png        # UI 패널 이미지
 ```
 
 ## ✨ 주요 기능
