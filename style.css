@@ -158,14 +158,27 @@ canvas {
 }
 
 .hearts-count {
-  font-size: clamp(10px, 2.8vw, 15px);
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 1vw, 6px);
+}
+
+.heart-icon {
+  width: clamp(14px, 1.5vw, 25px);
+  height: clamp(14px, 1.5vw, 20px);
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  object-fit: contain;
+}
+
+.heart-count-number {
+  font-size: clamp(12px, 3vw, 13px);
   color: #FFFFFF;
   text-shadow: 1px 1px 0px #000000;
   font-weight: bold;
   font-family: "NeoDunggeunmo", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   line-height: 1;
-  display: flex;
-  align-items: center;
 }
 /* 버프 표시 (게임 내부) */
 .buffs-display {

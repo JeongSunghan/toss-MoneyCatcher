@@ -71,28 +71,25 @@
       }
     },
 
-    /**
-     * 하트 UI 업데이트
-     * 생명 수를 표시하고, 적을수록 어둡게 표시합니다.
-     */
     updateHearts(state) {
       const { elHeartsCount, hearts } = state;
       if (!elHeartsCount) return;
       
-      // "❤️ x5" 형식으로 표시
-      elHeartsCount.textContent = `×${hearts}`;
+      elHeartsCount.innerHTML = '';
       
-      // 하트가 적을수록 색상 변경 (시각적 피드백)
-      const heartIcon = elHeartsCount.parentElement?.querySelector(".heart-icon");
-      if (heartIcon) {
-        if (hearts <= 1) {
-          heartIcon.style.filter = "drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.5)) brightness(0.7)";
-        } else if (hearts <= 2) {
-          heartIcon.style.filter = "drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.5)) brightness(0.85)";
-        } else {
-          heartIcon.style.filter = "drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.5))";
-        }
-      }
+      const heartImg = document.createElement('img');
+      heartImg.src = 'assets/pixel_heart/heart_V3.png';
+      heartImg.alt = '하트';
+      heartImg.className = 'heart-icon';
+      heartImg.width = 50;
+      heartImg.height = 50;
+      heartImg.setAttribute('aria-hidden', 'true');
+      elHeartsCount.appendChild(heartImg);
+      
+      const countSpan = document.createElement('span');
+      countSpan.className = 'heart-count-number';
+      countSpan.textContent = `×${hearts}`;
+      elHeartsCount.appendChild(countSpan);
     },
 
     /**
