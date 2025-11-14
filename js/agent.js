@@ -1,34 +1,20 @@
-/**
- * agent.js - 캐릭터 및 물리 시스템
- * 
- * 플레이어 캐릭터의 위치, 애니메이션, 충돌 감지를 관리합니다.
- * 마우스/터치 입력에 따라 부드럽게 이동합니다.
- */
 (function() {
   "use strict";
 
   window.Game = window.Game || {};
   
-  // ============================================
-  // 캐릭터 상태
-  // ============================================
   Game.AgentSystem = {
     agent: {
-      x: 180,        // X 좌표 (화면 중앙)
-      y: 462,        // Y 좌표 (화면 하단)
-      w: 76,         // 너비
-      h: 32,         // 높이
-      speed: 2.0,    // 이동 속도
-      vx: 0,         // X축 속도
-      face: 1,       // 방향 (1: 오른쪽, -1: 왼쪽)
-      anim: { kind: "idle", t: 0, frame: 0 }, // 애니메이션 상태
+      x: 180,
+      y: 462,
+      w: 76,
+      h: 32,
+      speed: 2.0,
+      vx: 0,
+      face: 1,
+      anim: { kind: "idle", t: 0, frame: 0 },
     },
     
-    /**
-     * 캐릭터 초기화
-     * 게임 시작 시 화면 하단 중앙에 배치합니다.
-     * @param {Object} world - 게임 월드 정보
-     */
     init(world) {
       this.agent.x = world.w / 2;
       this.agent.y = world.h - 58;
@@ -37,51 +23,29 @@
       this.agent.anim = { kind: "idle", t: 0, frame: 0 };
     },
     
-    /**
-     * 캐릭터 위치 업데이트
-     * 목표 위치로 부드럽게 이동합니다. 거리에 따라 보간 계수를 조정하여
-     * 빠른 움직임에도 자연스럽게 반응합니다.
-     * @param {number} targetX - 목표 X 좌표
-     * @param {Object} world - 게임 월드 정보
-     * @param {number} speedMultiplier - 속도 배수 (디버프/FEVER 타임 적용)
-     */
     updatePosition(targetX, world, speedMultiplier = 1.0) {
       const agent = this.agent;
       const clamped = Math.max(agent.w / 2, Math.min(world.w - agent.w / 2, targetX));
       const distance = clamped - agent.x;
       const absDistance = Math.abs(distance);
       
-      // 거리에 따른 동적 보간 계수: 빠른 움직임일수록 더 직접적으로 반응
       let lerpFactor = 0.85;
-      if (absDistance > 60) lerpFactor = 0.95;      // 매우 빠름
-      else if (absDistance > 30) lerpFactor = 0.90;  // 빠름
-      else if (absDistance > 10) lerpFactor = 0.85;  // 보통
+      if (absDistance > 60) lerpFactor = 0.95;
+      else if (absDistance > 30) lerpFactor = 0.90;
+      else if (absDistance > 10) lerpFactor = 0.85;
       
-      // 부드러운 이동 적용
       agent.x += distance * lerpFactor * speedMultiplier;
       agent.vx = distance * speedMultiplier;
       
-      // 이동 방향에 따라 캐릭터 방향 변경
       if (Math.abs(agent.vx) > 0.1) {
         agent.face = agent.vx > 0 ? 1 : -1;
       }
     },
     
-    /**
-     * 관성 업데이트
-     * 이동 후 자연스러운 감속 효과를 적용합니다.
-     */
     updateInertia() {
       this.agent.vx *= 0.80;
     },
     
-    /**
-     * 충돌 감지 (아이템과 캐릭터)
-     * 원형 아이템과 사각형 캐릭터의 충돌을 감지합니다.
-     * 충돌 범위를 20% 확대하여 더 쉽게 수집할 수 있도록 합니다.
-     * @param {Object} c - 아이템 객체 {x, y, r}
-     * @returns {boolean} 충돌 여부
-     */
     hitAgent(c) {
       const agent = this.agent;
       const rx = agent.x - agent.w / 2;
@@ -89,13 +53,11 @@
       const rw = agent.w;
       const rh = agent.h;
       
-      // 가장 가까운 점 계산
       const nx = Math.max(rx, Math.min(c.x, rx + rw));
       const ny = Math.max(ry, Math.min(c.y, ry + rh));
       const dx = c.x - nx;
       const dy = c.y - ny;
       
-      // 충돌 범위 20% 확대
       const adjustedRadius = c.r * 1.2;
       return dx * dx + dy * dy <= adjustedRadius * adjustedRadius;
     },

@@ -470,6 +470,54 @@ button[hidden] {
   opacity: 0;
 }
 
+.countdown {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(64px, 16vw, 96px);
+  font-weight: 900;
+  color: #FFE66D;
+  text-shadow: 
+    0 0 20px rgba(255, 230, 109, 0.8),
+    0 0 40px rgba(255, 230, 109, 0.6),
+    0 0 60px rgba(255, 230, 109, 0.4),
+    4px 4px 8px rgba(0, 0, 0, 0.8),
+    -2px -2px 4px rgba(255, 255, 255, 0.3);
+  z-index: 2000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  animation: countdownPulse 1s ease-in-out;
+  white-space: nowrap;
+}
+
+.countdown.countdown-start {
+  font-size: clamp(32px, 8vw, 48px);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.countdown[hidden] {
+  display: none;
+  opacity: 0;
+}
+
+@keyframes countdownPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
 /* 사이드바 스타일 (테트리스 스타일) */
 .sidebar {
   background: linear-gradient(180deg, #8B6F47, #6B5438);

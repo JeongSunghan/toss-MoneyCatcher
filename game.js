@@ -213,8 +213,11 @@
     score = 0,
     highScore = Number(localStorage.getItem("mc.highscore") || 0);
   let paused = true,
+    pauseStartTime = 0, // 일시정지 시작 시간
+    pausedSpawnOffset = 0, // 일시정지 중 누적된 스폰 시간 오프셋
     gameOver = false,
-    muted = false;
+    muted = false,
+    isCountdownActive = false; // 카운트다운 진행 중 플래그
   let hearts = 5;
   elHi.textContent = `₩${highScore.toLocaleString('ko-KR')}`;
   
@@ -1000,7 +1003,7 @@
       );
     }
 
-    if (!paused && !gameOver) {
+    if (!paused && !gameOver && !isCountdownActive) {
       const deltaTime = dt / 1000;
       
       // 입력 처리 및 캐릭터 이동
@@ -1125,18 +1128,20 @@
         if (agent) agent.vx = 0;
       }
 
-      // 아이템 스폰
-      const baseSpawn = LV[levelIndex]?.spawn || 700;
-      const spawnInterval = baseSpawn * (0.92 + Math.random() * 0.16);
-      const nextSpawnAt = ItemSystem?.nextSpawnAt || 0;
+      // 아이템 스폰 (일시정지 중이 아닐 때만)
+      if (!paused) {
+        const baseSpawn = LV[levelIndex]?.spawn || 700;
+        const spawnInterval = baseSpawn * (0.92 + Math.random() * 0.16);
+        const nextSpawnAt = ItemSystem?.nextSpawnAt || 0;
 
-      if (ts >= nextSpawnAt) {
-        spawnOne();
-        if (ItemSystem) ItemSystem.nextSpawnAt = ts + spawnInterval;
+        if (ts >= nextSpawnAt) {
+          spawnOne();
+          if (ItemSystem) ItemSystem.nextSpawnAt = ts + spawnInterval;
+        }
       }
 
-      // 미국 주식 떡상 버프: 빠른 수표 스폰
-      if (BuffSystem && BuffSystem.stockBoomActive && ts >= BuffSystem.stockBoomNextSpawn) {
+      // 미국 주식 떡상 버프: 빠른 수표 스폰 (일시정지 중이 아닐 때만)
+      if (!paused && BuffSystem && BuffSystem.stockBoomActive && ts >= BuffSystem.stockBoomNextSpawn) {
         const ITEM = window.Game?.ITEM || {};
         const margin = 16;
         const gridSize = (world.w - margin * 2) / 4;
@@ -1535,40 +1540,50 @@
     InputSystem.setupEventListeners(cvs, world);
   }
 
-  // 키보드 접근성: ESC 키로 오버레이 닫기, Enter/Space로 버튼 활성화
   window.addEventListener("keydown", (e) => {
-    // ESC 키: 오버레이 닫기
     if (e.key === "Escape") {
       if (!tutorialOverlay.hidden) {
-        // 튜토리얼 닫기
         if (btnCloseTutorial) btnCloseTutorial.click();
         e.preventDefault();
         return;
       }
       if (!overlay.hidden && !gameOver) {
-        // 일시정지 오버레이 닫기
         if (paused) {
-          paused = false;
-          playBGM(true);
           hideOverlay();
+          startCountdown(() => {
+            if (ItemSystem && ItemSystem.nextSpawnAt > 0) {
+              ItemSystem.nextSpawnAt = performance.now() + pausedSpawnOffset;
+              pausedSpawnOffset = 0;
+            }
+            
+            if (InputSystem) {
+              InputSystem.mouseTargetX = null;
+              InputSystem.pDown = false;
+            }
+            
+            paused = false;
+            pauseStartTime = 0;
+            
+            if (isCountdownActive) {
+              isCountdownActive = false;
+            }
+            
+            playBGM(true);
+          });
         }
         e.preventDefault();
         return;
       }
     }
     
-    // Enter/Space: 포커스된 버튼 활성화
     if ((e.key === "Enter" || e.key === " ") && document.activeElement?.tagName === "BUTTON") {
-      // Space 키는 기본 스크롤 동작 방지 (버튼 클릭 시에만)
       if (e.key === " " && document.activeElement.tagName === "BUTTON") {
         e.preventDefault();
       }
-      return; // 기본 버튼 클릭 동작 허용
+      return;
     }
     
-    // 게임 플레이 중 키보드 조작 (방향키)
-    if (!gameOver && !paused && tutorialOverlay.hidden && overlay.hidden) {
-      // 방향키로 캐릭터 이동 (키보드 접근성)
+    if (!gameOver && !paused && !isCountdownActive && tutorialOverlay.hidden && overlay.hidden) {
       const agent = getAgent();
       if (agent) {
         const moveSpeed = 5;
@@ -1584,42 +1599,55 @@
       }
     }
     
-    // Space 키: 게임 일시정지/재개
     if (e.key === " " && !gameOver && tutorialOverlay.hidden && overlay.hidden) {
-      paused = !paused;
-      if (paused) {
+      if (!paused) {
+        paused = true;
+        pauseStartTime = performance.now();
         playBGM(false);
         showOverlay("PAUSED", "계속하려면 CONTINUE 버튼을 누르세요", "CONTINUE");
-        // 포커스를 CONTINUE 버튼으로 이동
         setTimeout(() => {
           if (btnStart) btnStart.focus();
         }, 100);
+        
+        if (ItemSystem && ItemSystem.nextSpawnAt > 0) {
+          const remainingTime = ItemSystem.nextSpawnAt - pauseStartTime;
+          ItemSystem.nextSpawnAt = pauseStartTime;
+          pausedSpawnOffset = remainingTime;
+        }
       } else {
-        playBGM(true);
         hideOverlay();
+        startCountdown(() => {
+          if (ItemSystem && ItemSystem.nextSpawnAt > 0) {
+            ItemSystem.nextSpawnAt = performance.now() + pausedSpawnOffset;
+            pausedSpawnOffset = 0;
+          }
+          
+          if (InputSystem) {
+            InputSystem.mouseTargetX = null;
+            InputSystem.pDown = false;
+          }
+          
+          paused = false;
+          pauseStartTime = 0;
+          
+          if (isCountdownActive) {
+            isCountdownActive = false;
+          }
+          
+          playBGM(true);
+        });
       }
       e.preventDefault();
     }
   });
   
-  // 키보드 접근성: 키를 놓았을 때 이동 중지
-  window.addEventListener("keyup", (e) => {
-    if (!gameOver && !paused && (e.key === "ArrowLeft" || e.key === "ArrowRight" || 
-        e.key === "a" || e.key === "A" || e.key === "d" || e.key === "D")) {
-      // 키를 놓으면 이동 중지 (선택적)
-      // 실제로는 마우스/터치 입력이 우선이므로 주석 처리
-    }
-  });
 
-  // 프롤로그 버튼 클릭 이벤트
   if (btnStartPrologue) {
     btnStartPrologue.addEventListener("click", () => {
-      // 프롤로그 페이드아웃
       if (prologueOverlay) {
         prologueOverlay.style.transition = "opacity 0.5s ease-out";
         prologueOverlay.style.opacity = "0";
         
-        // 페이드아웃 완료 후 메인 메뉴 표시
         setTimeout(() => {
           if (prologueOverlay) {
             prologueOverlay.hidden = true;
@@ -1630,7 +1658,6 @@
             overlay.style.display = "grid";
             overlay.style.opacity = "0";
             overlay.style.transition = "opacity 0.5s ease-in";
-            // 페이드인 시작
             setTimeout(() => {
               if (overlay) overlay.style.opacity = "1";
             }, 10);
@@ -1640,11 +1667,103 @@
     });
   }
   
+  const countdownEl = document.getElementById("countdown");
+  
+  function startCountdown(callback) {
+    if (isCountdownActive) return;
+    isCountdownActive = true;
+    
+    if (InputSystem) {
+      InputSystem.mouseTargetX = null;
+      InputSystem.pDown = false;
+    }
+    
+    let count = 3;
+    const showCountdown = (num) => {
+      if (!countdownEl) return;
+      if (num > 0) {
+        countdownEl.textContent = `${num}`;
+        countdownEl.hidden = false;
+        countdownEl.style.opacity = "1";
+        countdownEl.style.animation = "none";
+        countdownEl.className = "countdown";
+        setTimeout(() => {
+          countdownEl.style.animation = "countdownPulse 1s ease-in-out";
+        }, 10);
+      } else {
+        countdownEl.textContent = "시작!";
+        countdownEl.hidden = false;
+        countdownEl.style.opacity = "1";
+        countdownEl.style.animation = "countdownPulse 0.5s ease-in-out";
+        countdownEl.className = "countdown countdown-start";
+      }
+    };
+    
+    const hideCountdown = () => {
+      if (!countdownEl) return;
+      countdownEl.style.opacity = "0";
+      setTimeout(() => {
+        if (countdownEl) {
+          countdownEl.hidden = true;
+          countdownEl.textContent = "";
+          countdownEl.className = "countdown";
+        }
+      }, 500);
+    };
+    
+    showCountdown(count);
+    count--;
+    
+    const countdownInterval = setInterval(() => {
+      if (gameOver || !paused) {
+        clearInterval(countdownInterval);
+        isCountdownActive = false;
+        hideCountdown();
+        return;
+      }
+      
+      if (count > 0) {
+        showCountdown(count);
+        count--;
+      } else {
+        clearInterval(countdownInterval);
+        showCountdown(0);
+        setTimeout(() => {
+          hideCountdown();
+          isCountdownActive = false;
+          if (InputSystem) {
+            InputSystem.pDown = false;
+            InputSystem.mouseTargetX = null;
+          }
+          if (callback) callback();
+        }, 1000);
+      }
+    }, 1000);
+  }
+  
   btnStart.addEventListener("click", () => {
     if (paused && !gameOver) {
-      paused = false;
-      playBGM(true); // 재개 시 BGM 재생
       hideOverlay();
+      startCountdown(() => {
+        if (ItemSystem && ItemSystem.nextSpawnAt > 0) {
+          ItemSystem.nextSpawnAt = performance.now() + pausedSpawnOffset;
+          pausedSpawnOffset = 0;
+        }
+        
+        if (InputSystem) {
+          InputSystem.mouseTargetX = null;
+          InputSystem.pDown = false;
+        }
+        
+        paused = false;
+        pauseStartTime = 0;
+        
+        if (isCountdownActive) {
+          isCountdownActive = false;
+        }
+        
+        playBGM(true);
+      });
       return;
     }
     startGame();
@@ -1886,13 +2005,19 @@
   
   btnPause.addEventListener("click", () => {
     if (gameOver) return;
-    paused = !paused;
-    if (paused) {
+    if (!paused) {
+      // 일시정지 시작
+      paused = true;
+      pauseStartTime = performance.now();
       playBGM(false); // 일시정지 시 BGM 정지
       showOverlay("PAUSED", "계속하려면 CONTINUE 버튼을 누르세요", "CONTINUE");
-    } else {
-      playBGM(true); // 재개 시 BGM 재생
-      hideOverlay();
+      
+      // 아이템 스폰 타이머 일시정지: 일시정지 시작 시간을 기록하여 재개 시 보정
+      if (ItemSystem && ItemSystem.nextSpawnAt > 0) {
+        const remainingTime = ItemSystem.nextSpawnAt - pauseStartTime;
+        ItemSystem.nextSpawnAt = pauseStartTime; // 일시정지 시점으로 설정
+        pausedSpawnOffset = remainingTime; // 남은 시간 저장
+      }
     }
   });
   
@@ -2104,6 +2229,14 @@
       popBanner("관리자 모드 비활성화", 2000);
     }
   };
+  
+  // 전역 접근을 위한 게터 함수들
+  window.Game.paused = () => paused;
+  window.Game.gameOver = () => gameOver;
+  window.Game.isCountdownActive = () => isCountdownActive;
+  window.Game.getMeetingCallStopped = () => meetingCallStopped;
+  window.Game.getMeetingCallNextStop = () => meetingCallNextTime;
+  window.Game.getSubscriptionBombNextCharge = () => subscriptionBombNextCharge;
   
   console.log("💡 테스트 모드: enableAdminMode() - 관리자 모드 활성화");
   console.log("💡 테스트 모드: disableAdminMode() - 관리자 모드 비활성화");
