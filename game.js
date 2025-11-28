@@ -929,22 +929,7 @@
     if (UISystem?.updateHearts) {
       UISystem.updateHearts({ elHeartsCount, hearts });
     } else {
-      if (!elHeartsCount) return;
-      elHeartsCount.innerHTML = '';
-      
-      const heartImg = document.createElement('img');
-      heartImg.src = 'assets/pixel_heart/heart_V3.png';
-      heartImg.alt = '하트';
-      heartImg.className = 'heart-icon';
-      heartImg.width = 50;
-      heartImg.height = 50;
-      heartImg.setAttribute('aria-hidden', 'true');
-      elHeartsCount.appendChild(heartImg);
-      
-      const countSpan = document.createElement('span');
-      countSpan.className = 'heart-count-number';
-      countSpan.textContent = `×${hearts}`;
-      elHeartsCount.appendChild(countSpan);
+      if (elHeartsCount) elHeartsCount.textContent = `×${hearts}`;
     }
   }
   
