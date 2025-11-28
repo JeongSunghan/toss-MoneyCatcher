@@ -167,6 +167,14 @@ canvas {
   display: flex;
   align-items: center;
 }
+
+.heart-icon {
+  width: clamp(20px, 4vw, 20px);
+  height: clamp(12px, 4vw, 20px);
+  object-fit: contain;
+  filter: drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.5));
+  transition: filter 0.3s ease;
+}
 /* 버프 표시 (게임 내부) */
 .buffs-display {
   position: absolute;
@@ -505,16 +513,26 @@ button[hidden] {
 
 @keyframes countdownPulse {
   0% {
-    transform: translate(-50%, -50%) scale(0.5);
+    transform: translate(-50%, -50%) scale(0.3);
     opacity: 0;
   }
-  50% {
-    transform: translate(-50%, -50%) scale(1.1);
+  20% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
+  }
+  40% {
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  60% {
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  80% {
+    transform: translate(-50%, -50%) scale(1);
     opacity: 1;
   }
   100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0;
   }
 }
 
@@ -1083,4 +1101,156 @@ button[hidden] {
     width: clamp(80px, 40vw, 150px);
     height: 10px;
   }
+}
+
+/* ========================================
+   UI 애니메이션 효과
+   ======================================== */
+
+/* 점수 증가 애니메이션 - 픽셀 스타일 */
+@keyframes scorePopIn {
+  0% {
+    transform: scale(1) translateY(0);
+  }
+  30% {
+    transform: scale(1.08) translateY(-2px);
+    color: #FFD700;
+    text-shadow: 2px 2px 0px #FF6B6B;
+  }
+  50% {
+    transform: scale(1.12) translateY(-3px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+.score-animate {
+  animation: scorePopIn 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* 콤보 펄스 애니메이션 - 픽셀 스타일 */
+@keyframes comboPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.15);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  75% {
+    transform: scale(1.1);
+  }
+}
+
+.combo-pulse {
+  animation: comboPulse 0.3s steps(4);
+}
+
+/* 레벨업 border 효과 - 픽셀 스타일 */
+@keyframes levelUpBorder {
+  0% {
+    border-color: #FFD700;
+    border-width: 0px;
+    box-shadow: inset 0 0 0px #FFD700, 0 0 0px #FFD700;
+  }
+  15% {
+    border-width: 8px;
+    box-shadow: inset 0 0 30px #FFD700, 0 0 30px #FFD700;
+  }
+  30% {
+    border-color: #FFA500;
+    border-width: 6px;
+  }
+  50% {
+    border-color: #FFD700;
+    border-width: 8px;
+  }
+  70% {
+    border-color: #FFA500;
+    border-width: 4px;
+    box-shadow: inset 0 0 20px #FFD700, 0 0 20px #FFD700;
+  }
+  100% {
+    border-width: 0px;
+    border-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.level-up-flash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  border: 0px solid #FFD700;
+  border-style: solid;
+  animation: levelUpBorder 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  background: transparent;
+}
+
+/* 하트 애니메이션 */
+@keyframes heartBounce {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+  }
+  25% {
+    transform: scale(1.3) translateY(-5px);
+  }
+  50% {
+    transform: scale(0.9) translateY(0);
+  }
+  75% {
+    transform: scale(1.1) translateY(-2px);
+  }
+}
+
+@keyframes heartShake {
+  0%, 100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-3px) rotate(-5deg);
+  }
+  50% {
+    transform: translateX(3px) rotate(5deg);
+  }
+  75% {
+    transform: translateX(-2px) rotate(-3deg);
+  }
+}
+
+.heart-gain {
+  animation: heartBounce 0.5s ease-out;
+}
+
+.heart-loss {
+  animation: heartShake 0.4s ease-out;
+}
+
+/* 게임오버 통계창 드롭다운 애니메이션 */
+@keyframes statsDropDown {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(10px);
+  }
+  80% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.stats-drop-animation {
+  animation: statsDropDown 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

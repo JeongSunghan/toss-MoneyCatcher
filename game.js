@@ -225,6 +225,8 @@
   let gameStartTime = 0;        // 게임 시작 시간
   let maxComboReached = 0;      // 최고 콤보
   let totalDebtAvoided = 0;     // 피한 빚 총액
+  let itemsCollectedThisGame = {}; // 이번 게임에서 수집한 아이템
+  let playerStats = null;       // 플레이어 통계 (StatsSystem에서 로드)
   
   // 관리자 모드
   let adminMode = {
@@ -475,6 +477,16 @@
   function collect(type) {
     const base = SCORE[type] || 0;
     const currentLevel = levelIndex + 1; // levelIndex는 0-based이므로 +1
+
+    // 아이템 수집 통계 카운트
+    const itemKey = Object.keys(ITEM).find(key => ITEM[key] === type);
+    if (itemKey) {
+      const statsKey = itemKey.toLowerCase().replace('buff_', '').replace('_', '');
+      if (!itemsCollectedThisGame[statsKey]) {
+        itemsCollectedThisGame[statsKey] = 0;
+      }
+      itemsCollectedThisGame[statsKey]++;
+    }
     
     // 버프 아이템 처리
     if (type === ITEM.BUFF_GOLDEN_TIME) {
@@ -580,6 +592,11 @@
           setDebuffNextTime(0); // 디버프 대기 타이머 정지
           popBanner(`FEVER TIME!🔥\n(${ComboSystem.comboCount} 콤보)`);
           playSound("sfx-combo", 0.8); // FEVER 타임 발동 사운드 (25, 50, 75, 100 콤보)
+
+          // 콤보 달성 특수 파티클 효과
+          if (ItemSystem?.spawnComboParticles) {
+            ItemSystem.spawnComboParticles(d.x, d.y, ComboSystem.comboCount);
+          }
         }
       }
       
@@ -647,6 +664,11 @@
       levelIndex = newLevel;
       popBanner(`레벨 업! LV ${LV[levelIndex]?.id || levelIndex + 1} 🎉`);
       playSound("sfx-clear", 0.8); // 레벨업 사운드
+
+      // 레벨업 플래시 효과
+      if (Game.UISystem && Game.UISystem.triggerLevelUpFlash) {
+        Game.UISystem.triggerLevelUpFlash();
+      }
       
       // 레벨이 변경되면 BGM 템포 업데이트
       const prevLevelNum = prevLevel + 1;
@@ -1320,11 +1342,19 @@
     levelIndex = 0;
     score = 0;
     hearts = 5;
-    
+
     // 통계 초기화
     gameStartTime = performance.now();
     maxComboReached = 0;
     totalDebtAvoided = 0;
+
+    // 이번 게임 아이템 수집 카운터 초기화
+    itemsCollectedThisGame = {};
+
+    // 플레이어 통계 로드
+    if (!playerStats && Game.StatsSystem) {
+      playerStats = Game.StatsSystem.init();
+    }
     
     if (ComboSystem?.init) ComboSystem.init();
     if (ItemSystem?.init) {
@@ -1428,10 +1458,36 @@
   function endGame() {
     gameOver = true;
     paused = true;
-    
+
+    // 게임오버 폭발 효과
+    const agent = getAgent();
+    if (agent && ItemSystem?.spawnExplosion) {
+      ItemSystem.spawnExplosion(agent.x, agent.y);
+    }
+
     // BGM 정지
     playBGM(false);
-    
+
+    // 게임 통계 기록
+    const survivalTimeHistory = (performance.now() - gameStartTime) / 1000;
+    const comboCountHistory = getComboCount();
+    const finalMaxComboHistory = Math.max(maxComboReached, comboCountHistory || 0);
+
+    if (Game.StatsSystem && playerStats) {
+      const newAchievements = Game.StatsSystem.recordGame(playerStats, {
+        score,
+        maxCombo: finalMaxComboHistory,
+        level: levelIndex + 1,
+        survivalTime,
+        itemsCollected: itemsCollectedThisGame,
+      });
+
+      // 새로운 업적 달성 시 알림 (선택적)
+      if (newAchievements.length > 0) {
+        console.log("[Stats] New achievements:", newAchievements);
+      }
+    }
+
     let isNewRecord = false;
     if (score > highScore) {
       highScore = score;
@@ -1517,7 +1573,41 @@
       const divider2 = document.createElement('div');
       divider2.className = 'stat-divider';
       ovStats.appendChild(divider2);
-      
+
+      // 역대 최고 기록 표시
+      if (playerStats) {
+        const bestRecordsTitle = document.createElement('div');
+        bestRecordsTitle.className = 'stat-item';
+        bestRecordsTitle.style.textAlign = 'center';
+        bestRecordsTitle.style.fontWeight = 'bold';
+        bestRecordsTitle.style.fontSize = 'clamp(11px, 2.8vw, 14px)';
+        bestRecordsTitle.style.color = '#FFE66D';
+        bestRecordsTitle.textContent = '🏆 역대 최고 기록';
+        ovStats.appendChild(bestRecordsTitle);
+
+        const bestScoreDiv = document.createElement('div');
+        bestScoreDiv.className = 'stat-item';
+        bestScoreDiv.style.fontSize = 'clamp(9px, 2.2vw, 11px)';
+        bestScoreDiv.textContent = `최고 점수: ₩${playerStats.bestScore.toLocaleString('ko-KR')}`;
+        ovStats.appendChild(bestScoreDiv);
+
+        const bestComboDiv = document.createElement('div');
+        bestComboDiv.className = 'stat-item';
+        bestComboDiv.style.fontSize = 'clamp(9px, 2.2vw, 11px)';
+        bestComboDiv.textContent = `최고 콤보: ${playerStats.bestCombo}`;
+        ovStats.appendChild(bestComboDiv);
+
+        const totalGamesDiv = document.createElement('div');
+        totalGamesDiv.className = 'stat-item';
+        totalGamesDiv.style.fontSize = 'clamp(9px, 2.2vw, 11px)';
+        totalGamesDiv.textContent = `총 플레이: ${playerStats.totalGames}게임`;
+        ovStats.appendChild(totalGamesDiv);
+
+        const divider3 = document.createElement('div');
+        divider3.className = 'stat-divider';
+        ovStats.appendChild(divider3);
+      }
+
       // 엔딩 메시지
       const endingDiv = document.createElement('div');
       endingDiv.className = 'stat-item ending-message';
@@ -1644,23 +1734,27 @@
 
   if (btnStartPrologue) {
     btnStartPrologue.addEventListener("click", () => {
+      console.log("[Prologue] 시작 버튼 클릭됨");
+
       if (prologueOverlay) {
         prologueOverlay.style.transition = "opacity 0.5s ease-out";
         prologueOverlay.style.opacity = "0";
-        
+
         setTimeout(() => {
           if (prologueOverlay) {
             prologueOverlay.hidden = true;
             prologueOverlay.style.display = "none";
           }
           if (overlay) {
+            console.log("[Prologue] 메인 오버레이 표시");
             overlay.hidden = false;
             overlay.style.display = "grid";
-            overlay.style.opacity = "0";
-            overlay.style.transition = "opacity 0.5s ease-in";
-            setTimeout(() => {
-              if (overlay) overlay.style.opacity = "1";
-            }, 10);
+            overlay.style.opacity = "1"; // 즉시 표시
+
+            // 버튼에 포커스
+            if (btnStart) {
+              setTimeout(() => btnStart.focus(), 100);
+            }
           }
         }, 500);
       }

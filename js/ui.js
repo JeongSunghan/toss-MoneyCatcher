@@ -12,6 +12,98 @@
   Game.UISystem = {
     bannerQueue: [],           // 배너 메시지 큐
     currentBannerEndTime: 0,   // 현재 배너 종료 시간
+    animatedScore: 0,          // 애니메이션용 현재 점수
+    targetScore: 0,            // 목표 점수
+    scoreAnimationFrame: null, // 점수 애니메이션 프레임
+
+    /**
+     * 점수 애니메이션 트리거
+     * 점수가 증가할 때 부드러운 카운팅 효과를 적용합니다.
+     */
+    animateScore(elScore, newScore) {
+      if (!elScore) return;
+
+      // 기존 애니메이션 취소
+      if (this.scoreAnimationFrame) {
+        cancelAnimationFrame(this.scoreAnimationFrame);
+      }
+
+      // 점수가 줄어들면 즉시 업데이트 (애니메이션 없음)
+      if (newScore < this.animatedScore) {
+        this.animatedScore = newScore;
+        this.targetScore = newScore;
+        elScore.textContent = `₩${newScore.toLocaleString('ko-KR')}`;
+        return;
+      }
+
+      this.targetScore = newScore;
+      const startScore = this.animatedScore;
+      const diff = newScore - startScore;
+      const duration = Math.min(300, Math.max(150, diff / 100)); // 150-300ms
+      const startTime = performance.now();
+
+      // 팝업 애니메이션 클래스 추가
+      elScore.classList.add('score-animate');
+      setTimeout(() => elScore.classList.remove('score-animate'), 300);
+
+      const animate = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // easeOutQuad 이징 함수
+        const easeProgress = 1 - (1 - progress) * (1 - progress);
+
+        this.animatedScore = Math.floor(startScore + diff * easeProgress);
+        elScore.textContent = `₩${this.animatedScore.toLocaleString('ko-KR')}`;
+
+        if (progress < 1) {
+          this.scoreAnimationFrame = requestAnimationFrame(animate);
+        } else {
+          this.animatedScore = newScore;
+          elScore.textContent = `₩${newScore.toLocaleString('ko-KR')}`;
+        }
+      };
+
+      this.scoreAnimationFrame = requestAnimationFrame(animate);
+    },
+
+    /**
+     * 콤보 펄스 애니메이션 트리거
+     * 콤보가 증가할 때 시각적 피드백을 제공합니다.
+     */
+    triggerComboPulse(elCombo) {
+      if (!elCombo) return;
+
+      // 기존 애니메이션 제거
+      elCombo.classList.remove('combo-pulse');
+
+      // 리플로우 강제 (애니메이션 재시작)
+      void elCombo.offsetWidth;
+
+      // 새 애니메이션 추가
+      elCombo.classList.add('combo-pulse');
+
+      // 애니메이션 종료 후 클래스 제거
+      setTimeout(() => {
+        elCombo.classList.remove('combo-pulse');
+      }, 400);
+    },
+
+    /**
+     * 레벨업 플래시 효과 트리거
+     * 레벨업 시 화면 전체에 황금빛 플래시 효과를 표시합니다.
+     */
+    triggerLevelUpFlash() {
+      // 플래시 오버레이 생성
+      const flash = document.createElement('div');
+      flash.className = 'level-up-flash';
+      document.body.appendChild(flash);
+
+      // 애니메이션 종료 후 제거
+      setTimeout(() => {
+        flash.remove();
+      }, 800);
+    },
 
     /**
      * HUD 전체 업데이트
@@ -36,15 +128,23 @@
         updateDebuff,
       } = state;
 
-      // 점수 업데이트 (금액 형식으로 표시: ₩1,000,000)
+      // 점수 업데이트 (애니메이션 적용)
       if (elScore) {
-        elScore.textContent = `₩${score.toLocaleString('ko-KR')}`;
+        this.animateScore(elScore, score);
       }
       
       // 콤보 업데이트
       if (elCombo) {
         const comboCount = ComboSystem ? ComboSystem.comboCount : 0;
+        const prevCombo = parseInt(elCombo.dataset.prevCombo || '0');
         elCombo.textContent = `×${comboCount || 1}`;
+
+        // 콤보가 증가했을 때 펄스 효과
+        if (comboCount > prevCombo && comboCount > 1) {
+          this.triggerComboPulse(elCombo);
+        }
+
+        elCombo.dataset.prevCombo = comboCount;
       }
       
       // 레벨 업데이트
@@ -78,13 +178,25 @@
     updateHearts(state) {
       const { elHeartsCount, hearts } = state;
       if (!elHeartsCount) return;
-      
+
+      const prevHearts = parseInt(elHeartsCount.dataset.prevHearts || hearts);
+
       // "❤️ x5" 형식으로 표시
       elHeartsCount.textContent = `×${hearts}`;
-      
+
       // 하트가 적을수록 색상 변경 (시각적 피드백)
       const heartIcon = elHeartsCount.parentElement?.querySelector(".heart-icon");
       if (heartIcon) {
+        // 하트 변화 애니메이션 트리거
+        if (hearts > prevHearts) {
+          // 하트 증가
+          this.triggerHeartAnimation(heartIcon, 'gain');
+        } else if (hearts < prevHearts) {
+          // 하트 감소
+          this.triggerHeartAnimation(heartIcon, 'loss');
+        }
+
+        // 하트 개수에 따른 밝기 조정
         if (hearts <= 1) {
           heartIcon.style.filter = "drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.5)) brightness(0.7)";
         } else if (hearts <= 2) {
@@ -93,6 +205,35 @@
           heartIcon.style.filter = "drop-shadow(2px 2px 0px rgba(0, 0, 0, 0.5))";
         }
       }
+
+      // 이전 하트 개수 저장
+      elHeartsCount.dataset.prevHearts = hearts;
+    },
+
+    /**
+     * 하트 애니메이션 트리거
+     * @param {HTMLElement} heartIcon - 하트 아이콘 요소
+     * @param {string} type - 'gain' 또는 'loss'
+     */
+    triggerHeartAnimation(heartIcon, type) {
+      if (!heartIcon) return;
+
+      const animClass = type === 'gain' ? 'heart-gain' : 'heart-loss';
+      const duration = type === 'gain' ? 500 : 400;
+
+      // 기존 애니메이션 제거
+      heartIcon.classList.remove('heart-gain', 'heart-loss');
+
+      // 리플로우 강제
+      void heartIcon.offsetWidth;
+
+      // 새 애니메이션 추가
+      heartIcon.classList.add(animClass);
+
+      // 애니메이션 종료 후 클래스 제거
+      setTimeout(() => {
+        heartIcon.classList.remove(animClass);
+      }, duration);
     },
 
     /**

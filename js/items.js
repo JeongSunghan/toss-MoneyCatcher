@@ -66,7 +66,7 @@
         if (debuffSystem && debuffSystem.hasDebuff && debuffSystem.hasDebuff(window.Game?.DEBUFFS?.TAX_BOMB)) {
           weights = weights.map(([type, weight]) => {
             if (type === ITEM.TAX || type === ITEM.DEBT) {
-              return [type, weight * 2.5]; // 2.5배 증가
+              return [type, weight * 2.75]; // 2.75배 증가
             }
             return [type, weight];
           });
@@ -117,25 +117,119 @@
     },
 
     /**
-     * 아이템 수집 시 파티클 효과 생성
+     * 아이템 수집 시 파티클 효과 생성 (개선됨)
      * @param {number} x - 파티클 생성 X 좌표
      * @param {number} y - 파티클 생성 Y 좌표
      * @param {string} color - 파티클 색상
      * @param {number} count - 생성할 파티클 개수
+     * @param {Object} options - 추가 옵션 {speed, size, spread, type}
      */
-    spawnParticles(x, y, color, count = 8) {
+    spawnParticles(x, y, color, count = 8, options = {}) {
+      const {
+        speed = 1.0,
+        sizeMultiplier = 1.0,
+        spread = 1.0,
+        type = 'normal' // 'normal', 'burst', 'sparkle', 'explosion'
+      } = options;
+
       for (let i = 0; i < count; i++) {
-        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
-        const speed = 0.15 + Math.random() * 0.1;
+        let vx, vy, size, lifeDecay;
+
+        if (type === 'burst') {
+          // 폭발형: 모든 방향으로 빠르게 퍼짐
+          const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+          const baseSpeed = (0.3 + Math.random() * 0.2) * speed;
+          vx = Math.cos(angle) * baseSpeed;
+          vy = Math.sin(angle) * baseSpeed - 0.1;
+          size = (4 + Math.random() * 6) * sizeMultiplier;
+          lifeDecay = 0.015;
+        } else if (type === 'sparkle') {
+          // 반짝임: 작고 빠르게 깜빡임
+          const angle = (Math.PI * 2 * i) / count + Math.random() * 1.0;
+          const baseSpeed = (0.1 + Math.random() * 0.15) * speed;
+          vx = Math.cos(angle) * baseSpeed * spread;
+          vy = Math.sin(angle) * baseSpeed * spread - 0.03;
+          size = (2 + Math.random() * 3) * sizeMultiplier;
+          lifeDecay = 0.02;
+        } else if (type === 'explosion') {
+          // 폭발: 매우 크고 다양한 크기
+          const angle = Math.random() * Math.PI * 2;
+          const baseSpeed = (0.4 + Math.random() * 0.3) * speed;
+          vx = Math.cos(angle) * baseSpeed * spread;
+          vy = Math.sin(angle) * baseSpeed * spread;
+          size = (5 + Math.random() * 10) * sizeMultiplier;
+          lifeDecay = 0.012;
+        } else {
+          // 기본형: 원형으로 균등하게 퍼짐
+          const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+          const baseSpeed = (0.15 + Math.random() * 0.1) * speed;
+          vx = Math.cos(angle) * baseSpeed * spread;
+          vy = Math.sin(angle) * baseSpeed * spread - 0.05;
+          size = (3 + Math.random() * 4) * sizeMultiplier;
+          lifeDecay = 0.018;
+        }
+
         this.particles.push({
           x,
           y,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - 0.05,
+          vx,
+          vy,
           life: 1.0,
+          lifeDecay: lifeDecay,
           color,
-          size: 3 + Math.random() * 4,
+          size,
+          type,
         });
+      }
+    },
+
+    /**
+     * 콤보 달성 시 특수 파티클 효과 (새 기능)
+     * @param {number} x - 파티클 생성 X 좌표
+     * @param {number} y - 파티클 생성 Y 좌표
+     * @param {number} comboLevel - 콤보 레벨 (25, 50, 75, 100)
+     */
+    spawnComboParticles(x, y, comboLevel) {
+      const colors = ['#FFD700', '#FFA500', '#FF6B6B', '#FFE66D'];
+      const count = Math.min(30, 15 + comboLevel / 5);
+
+      // 폭발 파티클
+      this.spawnParticles(x, y, colors[Math.floor(Math.random() * colors.length)], count, {
+        speed: 1.5,
+        sizeMultiplier: 1.5,
+        spread: 1.3,
+        type: 'burst'
+      });
+
+      // 반짝임 파티클 추가
+      this.spawnParticles(x, y, '#FFFFFF', count / 2, {
+        speed: 2.0,
+        sizeMultiplier: 0.8,
+        spread: 1.5,
+        type: 'sparkle'
+      });
+    },
+
+    /**
+     * 게임오버 폭발 효과 (새 기능)
+     * @param {number} x - 폭발 중심 X 좌표
+     * @param {number} y - 폭발 중심 Y 좌표
+     */
+    spawnExplosion(x, y) {
+      const colors = ['#FF6B6B', '#FFA500', '#FFD700', '#FF4444'];
+
+      // 대형 폭발 파티클
+      for (let ring = 0; ring < 3; ring++) {
+        setTimeout(() => {
+          const count = 20 + ring * 10;
+          const color = colors[ring % colors.length];
+          this.spawnParticles(x, y, color, count, {
+            speed: 1.0 + ring * 0.3,
+            sizeMultiplier: 2.0 - ring * 0.3,
+            spread: 1.5 + ring * 0.5,
+            type: 'explosion'
+          });
+        }, ring * 100);
       }
     },
 
@@ -266,8 +360,20 @@
         const p = this.particles[i];
         p.x += p.vx * dt;
         p.y += p.vy * dt;
-        p.vy += 0.0002 * dt;  // 중력 적용
-        p.life -= dt / 400;   // 페이드 아웃
+
+        // 파티클 타입에 따른 물리 적용
+        if (p.type === 'sparkle') {
+          p.vy += 0.0001 * dt;  // 반짝임은 가벼운 중력
+        } else if (p.type === 'explosion') {
+          p.vy += 0.0003 * dt;  // 폭발은 강한 중력
+          p.vx *= 0.998;        // 공기 저항
+          p.vy *= 0.998;
+        } else {
+          p.vy += 0.0002 * dt;  // 기본 중력
+        }
+
+        // 수명 감소 (각 파티클마다 다른 감소율)
+        p.life -= (p.lifeDecay || 0.018) * dt;
         
         // 생명력이 0이 되거나 화면 밖으로 나가면 제거
         if (p.life <= 0 || p.y > world.h + 50) {
