@@ -1,0 +1,23 @@
+# 작업 문서 (로컬 작업 기록)
+save.md
+nextstep.md
+
+# Node modules
+node_modules/
+
+# 로그 파일
+*.log
+npm-debug.log*
+
+# 환경 변수
+.env
+.env.local
+
+# IDE 설정
+.vscode/
+.idea/
+*.sublime-*
+
+# OS 파일
+.DS_Store
+Thumbs.db

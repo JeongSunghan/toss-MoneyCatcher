@@ -474,7 +474,7 @@
   // ============================================
   // 게임 로직
   // ============================================
-  function collect(type) {
+  function collect(type, item) {
     const base = SCORE[type] || 0;
     const currentLevel = levelIndex + 1; // levelIndex는 0-based이므로 +1
 
@@ -593,9 +593,12 @@
           popBanner(`FEVER TIME!🔥\n(${ComboSystem.comboCount} 콤보)`);
           playSound("sfx-combo", 0.8); // FEVER 타임 발동 사운드 (25, 50, 75, 100 콤보)
 
-          // 콤보 달성 특수 파티클 효과
+          // 콤보 달성 특수 파티클 효과 (캐릭터 위치에서 생성)
           if (ItemSystem?.spawnComboParticles) {
-            ItemSystem.spawnComboParticles(d.x, d.y, ComboSystem.comboCount);
+            const agent = getAgent();
+            if (agent) {
+              ItemSystem.spawnComboParticles(agent.x, agent.y, ComboSystem.comboCount);
+            }
           }
         }
       }
@@ -1096,7 +1099,7 @@
               d.alive = false;
               const itemColor = COLOR[d.type] || "#999";
               spawnParticles(d.x, d.y, itemColor, 8);
-              collect(d.type);
+              collect(d.type, d);
               currentDrops.splice(i, 1);
             }
           }
@@ -1204,7 +1207,7 @@
         d.alive = false;
         const itemColor = COLOR[d.type] || "#999";
           spawnParticles(d.x, d.y, itemColor, (d.type === ITEM.TAX || d.type === ITEM.DEBT) ? 12 : 8);
-        collect(d.type);
+        collect(d.type, d);
           currentDrops.splice(i, 1);
         continue;
       }

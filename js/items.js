@@ -191,20 +191,21 @@
      */
     spawnComboParticles(x, y, comboLevel) {
       const colors = ['#FFD700', '#FFA500', '#FF6B6B', '#FFE66D'];
-      const count = Math.min(30, 15 + comboLevel / 5);
+      // 파티클 개수 줄임 (성능 최적화)
+      const count = Math.min(15, 8 + comboLevel / 10);
 
       // 폭발 파티클
       this.spawnParticles(x, y, colors[Math.floor(Math.random() * colors.length)], count, {
         speed: 1.5,
-        sizeMultiplier: 1.5,
+        sizeMultiplier: 1.8, // 크기를 키워서 적은 개수로도 화려하게
         spread: 1.3,
         type: 'burst'
       });
 
       // 반짝임 파티클 추가
-      this.spawnParticles(x, y, '#FFFFFF', count / 2, {
+      this.spawnParticles(x, y, '#FFFFFF', Math.ceil(count / 2), {
         speed: 2.0,
-        sizeMultiplier: 0.8,
+        sizeMultiplier: 1.0, // 크기를 키움
         spread: 1.5,
         type: 'sparkle'
       });
