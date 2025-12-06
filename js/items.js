@@ -12,9 +12,54 @@
   // ============================================
   // 아이템 시스템 상태
   // ============================================
+
+  // 파티클 풀링 시스템 (GC 압박 대폭 감소)
+  // performanceMode가 있으면 사용, 없으면 기본값 (모바일 감지)
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+  const PARTICLE_POOL_SIZE = window.Game?.performanceMode?.maxParticles || (isMobile ? 80 : 150);
+  const particlePool = [];
+  let particlePoolIndex = 0;
+
+  // 파티클 풀 초기화
+  function initParticlePool() {
+    for (let i = 0; i < PARTICLE_POOL_SIZE; i++) {
+      particlePool.push({
+        x: 0, y: 0, vx: 0, vy: 0,
+        life: 0, lifeDecay: 0,
+        color: '', size: 0, type: '',
+        active: false
+      });
+    }
+    console.log(`[Particles] 풀 초기화 완료 (크기: ${PARTICLE_POOL_SIZE})`);
+  }
+
+  // 풀에서 파티클 가져오기 (새 객체 생성 없음)
+  function getParticleFromPool() {
+    // 풀이 비어있으면 초기화
+    if (particlePool.length === 0) {
+      initParticlePool();
+    }
+
+    // 라운드 로빈 방식으로 풀에서 가져옴
+    for (let i = 0; i < particlePool.length; i++) {
+      const idx = (particlePoolIndex + i) % particlePool.length;
+      if (!particlePool[idx].active) {
+        particlePoolIndex = (idx + 1) % particlePool.length;
+        return particlePool[idx];
+      }
+    }
+    // 풀이 가득 찼으면 가장 오래된 것 재사용
+    const oldest = particlePool[particlePoolIndex];
+    particlePoolIndex = (particlePoolIndex + 1) % particlePool.length;
+    return oldest;
+  }
+
+  // 풀 초기화 실행
+  initParticlePool();
+
   Game.ItemSystem = {
     drops: [],        // 떨어지는 아이템 목록 {x, y, r, vy, type, alive, shakeOffset, shakeSpeed}
-    particles: [],    // 파티클 효과 목록 {x, y, vx, vy, life, color, size}
+    particles: particlePool,  // 파티클 풀 참조 (배열 재할당 없음)
     nextSpawnAt: 0,  // 다음 아이템 스폰 예정 시간
 
     /**
@@ -169,17 +214,18 @@
           lifeDecay = 0.018;
         }
 
-        this.particles.push({
-          x,
-          y,
-          vx,
-          vy,
-          life: 1.0,
-          lifeDecay: lifeDecay,
-          color,
-          size,
-          type,
-        });
+        // 풀에서 파티클 가져와서 재사용 (GC 부하 제거)
+        const p = getParticleFromPool();
+        p.x = x;
+        p.y = y;
+        p.vx = vx;
+        p.vy = vy;
+        p.life = 1.0;
+        p.lifeDecay = lifeDecay;
+        p.color = color;
+        p.size = size;
+        p.type = type;
+        p.active = true;
       }
     },
 
@@ -348,17 +394,11 @@
      * @param {Object} world - 게임 월드 정보
      */
     updateParticles(dt, world) {
-      // 모바일 최적화: 파티클 수 제한
-      const isMobile = window.innerWidth <= 768;
-      const maxParticles = isMobile ? 50 : 200;
-      
-      // 파티클이 너무 많으면 오래된 것부터 제거
-      if (this.particles.length > maxParticles) {
-        this.particles = this.particles.slice(-maxParticles);
-      }
-      
-      for (let i = this.particles.length - 1; i >= 0; i--) {
+      // 풀링 시스템: splice 없이 active 플래그로 관리 (GC 부하 제거)
+      for (let i = 0; i < this.particles.length; i++) {
         const p = this.particles[i];
+        if (!p.active) continue;
+
         p.x += p.vx * dt;
         p.y += p.vy * dt;
 
@@ -375,10 +415,10 @@
 
         // 수명 감소 (각 파티클마다 다른 감소율)
         p.life -= (p.lifeDecay || 0.018) * dt;
-        
-        // 생명력이 0이 되거나 화면 밖으로 나가면 제거
+
+        // 생명력이 0이 되거나 화면 밖으로 나가면 비활성화 (배열 조작 없음)
         if (p.life <= 0 || p.y > world.h + 50) {
-          this.particles.splice(i, 1);
+          p.active = false;
         }
       }
     },
@@ -389,7 +429,15 @@
      */
     init() {
       this.drops = [];
-      this.particles = [];
+      // 파티클 풀이 비어있으면 재초기화
+      if (this.particles.length === 0) {
+        initParticlePool();
+        this.particles = particlePool;
+      }
+      // 파티클 풀 초기화 (배열 재할당 없이 비활성화만)
+      for (let i = 0; i < this.particles.length; i++) {
+        this.particles[i].active = false;
+      }
       this.nextSpawnAt = 0;
     }
   };

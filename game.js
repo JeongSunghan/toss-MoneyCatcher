@@ -13,9 +13,29 @@
   const cvs = document.getElementById("game");
   const ctx = cvs.getContext("2d");
   const world = { w: 360, h: 520, scale: 1, shakeT: 0, shakeAmp: 0 };
-  
+
+  // Fallback 그라데이션 캐싱 (매프레임 재생성 방지)
+  let fallbackGradient = null;
+  let fallbackGradientHeight = 0;
+
+  // 모바일 성능 최적화 설정
+  const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+  const performanceMode = {
+    isMobile: isMobileDevice,
+    // 모바일: DPR 1.5로 제한 (렌더링 픽셀 수 44% 감소)
+    maxDpr: isMobileDevice ? 1.5 : 2,
+    // 모바일: 그림자 효과 비활성화
+    enableShadows: !isMobileDevice,
+    // 모바일: 파티클 수 제한
+    maxParticles: isMobileDevice ? 80 : 150
+  };
+  // 전역으로 노출 (다른 모듈에서 참조 가능)
+  window.Game = window.Game || {};
+  window.Game.performanceMode = performanceMode;
+  console.log(`[Performance] ${isMobileDevice ? '모바일' : 'PC'} 모드 활성화 (DPR: ${performanceMode.maxDpr}, 파티클: ${performanceMode.maxParticles})`);
+
   function resize() {
-    const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+    const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, performanceMode.maxDpr));
     const rect = cvs.getBoundingClientRect();
     const displayWidth = rect.width || 360;
     const displayHeight = rect.height || 520;
@@ -1263,11 +1283,15 @@
       ctx.clearRect(0, 0, cvs.width, cvs.height);
       const canvasWidth = cvs.width || 360;
       const canvasHeight = cvs.height || 520;
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvasHeight);
-      gradient.addColorStop(0, "#87CEEB");
-      gradient.addColorStop(0.5, "#5C94FC");
-      gradient.addColorStop(1, "#4A7BC8");
-      ctx.fillStyle = gradient;
+      // 그라데이션 캐싱: 높이가 바뀔 때만 재생성
+      if (!fallbackGradient || fallbackGradientHeight !== canvasHeight) {
+        fallbackGradient = ctx.createLinearGradient(0, 0, 0, canvasHeight);
+        fallbackGradient.addColorStop(0, "#87CEEB");
+        fallbackGradient.addColorStop(0.5, "#5C94FC");
+        fallbackGradient.addColorStop(1, "#4A7BC8");
+        fallbackGradientHeight = canvasHeight;
+      }
+      ctx.fillStyle = fallbackGradient;
       ctx.fillRect(0, 0, canvasWidth, canvasHeight);
       
       ctx.save();
