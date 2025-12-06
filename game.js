@@ -1,38 +1,44 @@
 /**
  * game.js - 메인 게임 루프 및 초기화
- * 
- * 게임의 메인 루프와 모든 시스템을 조율합니다.
- * Canvas 초기화, 게임 상태 관리, 이벤트 처리, 모듈 간 통신을 담당합니다.
  */
 (() => {
   "use strict";
 
-  // ============================================
-  // Canvas 초기화 및 리사이즈
-  // ============================================
+  // 배포 환경 설정
+  const PRODUCTION_URL = "https://toss-money-catcher.vercel.app";
+  const isProduction = window.location.origin === PRODUCTION_URL;
+
+  // 배포 환경에서 개발자 도구 감지 시 게임 강제 종료
+  if (isProduction) {
+    const devToolsCheck = () => {
+      const threshold = 160;
+      const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+      const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+      if (widthThreshold || heightThreshold) {
+        if (typeof endGame === 'function') endGame();
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-size:24px;color:#333;">개발자 도구 사용이 감지되었습니다.</div>';
+      }
+    };
+    setInterval(devToolsCheck, 1000);
+    window.addEventListener('resize', devToolsCheck);
+  }
+
   const cvs = document.getElementById("game");
   const ctx = cvs.getContext("2d");
   const world = { w: 360, h: 520, scale: 1, shakeT: 0, shakeAmp: 0 };
 
-  // Fallback 그라데이션 캐싱 (매프레임 재생성 방지)
   let fallbackGradient = null;
   let fallbackGradientHeight = 0;
 
-  // 모바일 성능 최적화 설정
   const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
   const performanceMode = {
     isMobile: isMobileDevice,
-    // 모바일: DPR 1.5로 제한 (렌더링 픽셀 수 44% 감소)
     maxDpr: isMobileDevice ? 1.5 : 2,
-    // 모바일: 그림자 효과 비활성화
     enableShadows: !isMobileDevice,
-    // 모바일: 파티클 수 제한
     maxParticles: isMobileDevice ? 80 : 150
   };
-  // 전역으로 노출 (다른 모듈에서 참조 가능)
   window.Game = window.Game || {};
   window.Game.performanceMode = performanceMode;
-  console.log(`[Performance] ${isMobileDevice ? '모바일' : 'PC'} 모드 활성화 (DPR: ${performanceMode.maxDpr}, 파티클: ${performanceMode.maxParticles})`);
 
   function resize() {
     const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, performanceMode.maxDpr));
@@ -179,22 +185,10 @@
   for (const k in toLoad) {
     const im = new Image();
     im.onerror = () => {
-      // agent 이미지는 fallback 렌더링이 있으므로 경고만 출력 (에러 아님)
-      if (k === 'agent_idle' || k === 'agent_run') {
-        console.log(`[Asset] Agent sprite not found: ${toLoad[k]} (using fallback rendering)`);
-      } else {
-        console.warn(`[Asset] Failed to load: ${toLoad[k]}`);
-      }
       assetsLoaded++;
-      if (assetsLoaded === totalAssets) {
-        console.log(`[Asset] All ${totalAssets} assets loaded (some with fallback)`);
-      }
     };
     im.onload = () => {
       assetsLoaded++;
-      if (assetsLoaded === totalAssets) {
-        console.log(`[Asset] All ${totalAssets} assets loaded`);
-      }
     };
     im.src = toLoad[k];
     IMG[k] = im;
@@ -1509,10 +1503,6 @@
         itemsCollected: itemsCollectedThisGame,
       });
 
-      // 새로운 업적 달성 시 알림 (선택적)
-      if (newAchievements.length > 0) {
-        console.log("[Stats] New achievements:", newAchievements);
-      }
     }
 
     let isNewRecord = false;
@@ -1761,7 +1751,6 @@
 
   if (btnStartPrologue) {
     btnStartPrologue.addEventListener("click", () => {
-      console.log("[Prologue] 시작 버튼 클릭됨");
 
       if (prologueOverlay) {
         prologueOverlay.style.transition = "opacity 0.5s ease-out";
@@ -1773,7 +1762,6 @@
             prologueOverlay.style.display = "none";
           }
           if (overlay) {
-            console.log("[Prologue] 메인 오버레이 표시");
             overlay.hidden = false;
             overlay.style.display = "grid";
             overlay.style.opacity = "1"; // 즉시 표시
@@ -2326,39 +2314,32 @@
   }
   
   requestAnimationFrame(loop);
-  console.log("%c[MoneyCatcher]", "color:#5C94FC; font-size: 14px;");
-  
-  // 관리자 모드
-  window.enableAdminMode = function() {
-    adminMode.enabled = true;
-    adminMode.infiniteLives = true;
-    adminMode.scoreMultiplier = 10.0;
-    console.log("%c[관리자 모드 활성화]", "color:#FFD700; font-size: 14px; font-weight: bold;");
-    console.log("✓ 목숨 무한");
-    console.log("✓ 점수 10배 증가");
-    if (typeof popBanner !== 'undefined') {
-      popBanner("관리자 모드 활성화! 🔧", 2000);
-    }
-  };
-  
-  window.disableAdminMode = function() {
-    adminMode.enabled = false;
-    adminMode.infiniteLives = false;
-    adminMode.scoreMultiplier = 1.0;
-    console.log("%c[관리자 모드 비활성화]", "color:#999; font-size: 14px;");
-    if (typeof popBanner !== 'undefined') {
-      popBanner("관리자 모드 비활성화", 2000);
-    }
-  };
-  
-  // 전역 접근을 위한 게터 함수들
+
+  // 관리자 모드 (로컬 개발 환경에서만 사용 가능)
+  if (!isProduction) {
+    window.enableAdminMode = function() {
+      adminMode.enabled = true;
+      adminMode.infiniteLives = true;
+      adminMode.scoreMultiplier = 10.0;
+      if (typeof popBanner !== 'undefined') {
+        popBanner("관리자 모드 활성화! 🔧", 2000);
+      }
+    };
+
+    window.disableAdminMode = function() {
+      adminMode.enabled = false;
+      adminMode.infiniteLives = false;
+      adminMode.scoreMultiplier = 1.0;
+      if (typeof popBanner !== 'undefined') {
+        popBanner("관리자 모드 비활성화", 2000);
+      }
+    };
+  }
+
   window.Game.paused = () => paused;
   window.Game.gameOver = () => gameOver;
   window.Game.isCountdownActive = () => isCountdownActive;
   window.Game.getMeetingCallStopped = () => meetingCallStopped;
   window.Game.getMeetingCallNextStop = () => meetingCallNextTime;
   window.Game.getSubscriptionBombNextCharge = () => subscriptionBombNextCharge;
-  
-  console.log("💡 테스트 모드: enableAdminMode() - 관리자 모드 활성화");
-  console.log("💡 테스트 모드: disableAdminMode() - 관리자 모드 비활성화");
 })();
